@@ -5,3 +5,42 @@ server.js
 uploads/
 *.log
 .DS_Store
+
+# System
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs und Temp
+*.log
+*.tmp
+
+# Node
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Docker / lokal
+.env
+.env.local
+.env.*.local
+docker-compose.override.yml
+
+# Datenbanken und Dumps
+*.sqlite
+*.sqlite3
+*.db
+dumps/
