@@ -1,5 +1,5 @@
 import { AlertTriangle, Car, Cog, HandCoins, Plus, Route, TrendingUp, UserRound } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { AppSettings, AppState, Person, Trip } from "./lib/calc.ts";
 import { api, type TripPayload } from "./lib/api.ts";
 import { ageLabel, eur, pricePerLiter } from "./lib/format.ts";
@@ -88,12 +88,13 @@ export default function App() {
   const meId = settings.mePersonId;
   const me = persons.find((person) => person.id === meId) ?? null;
 
-  const visibleTrips = useMemo(() => {
-    if (filter === "alle" || !meId) return trips;
-    return trips.filter((trip) =>
-      filter === "fahrer" ? trip.driverId === meId : trip.passengers.some((p) => p.id === meId)
-    );
-  }, [filter, meId, trips]);
+  // kein Hook: die Liste wird nach den frühen Returns berechnet
+  const visibleTrips =
+    filter === "alle" || !meId
+      ? trips
+      : trips.filter((trip) =>
+          filter === "fahrer" ? trip.driverId === meId : trip.passengers.some((p) => p.id === meId)
+        );
 
   async function addPerson(name: string) {
     const result = await guard(() => api.addPerson(name));
