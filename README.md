@@ -1,12 +1,15 @@
 # MitFahr.io 2.0 – Fahrgemeinschaft abrechnen
 
-Eine Seite, zwei Tabs, keine Anmeldung. Wer fährt und wer mitfährt wird eingetragen,
-den Spritpreis holt die App automatisch von clever-tanken.de (Daten der MTS-K),
-und unter „Zahlungen" steht in einer Matrix, wer wem wie viel schuldet.
+Eine Seite, zwei Tabs. Jeder legt ein Konto an, trägt seine Fahrten ein, und unter
+„Zahlungen" steht in einer Matrix, wer wem wie viel schuldet. Den Spritpreis holt die
+App automatisch von clever-tanken.de (Daten der MTS-K).
 
 ## Was die App macht
 
-- **Personen**: auf der Seite anlegen und löschen (Name genügt, kein Konto).
+- **Konten**: Registrierung mit Vorname, Nachname, E-Mail und Passwort (mind. 8 Zeichen,
+  Großbuchstabe, Zahl, Sonderzeichen). Jedes Konto hängt an einer Person aus der
+  Fahrten-Liste; eine bestehende Person kann bei der Registrierung übernommen werden.
+  `ADMIN_EMAIL` (Standard `nagraszust@gmail.com`) wird beim Registrieren automatisch Admin.
 - **Fahrten**: Datum, Fahrer, Mitfahrer, Richtung (Hinfahrt / Rückfahrt / beides),
   Kilometer hin und zurück. Kosten je Fahrt = `km / 100 × Verbrauch × Tankpreis`,
   geteilt durch alle Insassen (Fahrer + Mitfahrer). Der Tankpreis wird beim
@@ -15,8 +18,28 @@ und unter „Zahlungen" steht in einer Matrix, wer wem wie viel schuldet.
   Roter Betrag = offen, `0,00 €` grün = ausgeglichen. Häkchen in der Zelle bestätigt
   eine einzelne Zahlung (mit Rückfrage), der Button unter der Spalte begleicht alle
   offenen Beträge eines Mitfahrers (mit Rückfrage).
-- **Einstellungen**: PLZ, Kraftstoff (Super E10, Diesel, SuperPlus), Verbrauch und
+- **Einstellungen**: Zuhause-Adresse je Konto (per Ortssuche, im Fahrt-Dialog als
+  Schnellwahl für Start und Ziel) und – nur für Admins – PLZ, Kraftstoff, Verbrauch und
   wahlweise ein manueller Literpreis statt der Automatik.
+- **Admin-Dashboard**: alle Konten mit letztem Login und Fahrten-Zähler, Passwort direkt
+  neu setzen, Konto löschen (die Person bleibt, wenn noch Fahrten daran hängen).
+- **Passwort vergessen**: 6-stelliger Code per Mail (15 Minuten gültig, 5 Versuche),
+  danach neues Passwort.
+
+## Rechte
+
+| Aktion | Nutzer | Admin |
+| --- | --- | --- |
+| Fahrten sehen, Preise holen | ✓ | ✓ |
+| Fahrt eintragen | nur als eigener Fahrer | für alle Personen |
+| Fahrt löschen | nur eigene | alle |
+| Schulden begleichen | nur eigene | alle |
+| Zuhause-Adresse | eigene | eigene |
+| PLZ, Kraftstoff, Verbrauch, Preis | – | ✓ |
+| Kontenliste, Passwort setzen, Konto löschen | – | ✓ |
+
+Die Session liegt in einem `httpOnly`-Cookie (JWT, 30 Tage). Login und „Passwort vergessen"
+sind auf 10 bzw. 5 Versuche pro Viertelstunde gedrosselt.
 
 ## Tankpreis
 
@@ -32,22 +55,33 @@ bekannte Preis als „veraltet".
   eine Seite mit zwei Tabs (`Fahrten`, `Zahlungen`).
 - **Backend**: Express 4 in TypeScript, liefert API und Frontend aus einem Prozess.
 - **Datenbank**: PostgreSQL 16, Schema beim Start idempotent angelegt.
-  Tabellen: `persons`, `trips`, `trip_passengers`, `payments`, `settings`,
-  `fuel_price_cache`.
+  Tabellen: `users`, `reset_codes`, `mail_queue`, `persons`, `trips`,
+  `trip_passengers`, `payments`, `settings`, `fuel_price_cache`.
 
 ### API
 
 | Methode | Pfad | Zweck |
 | --- | --- | --- |
-| GET | `/api/state` | Personen, Fahrten, Matrix, Einstellungen, Preis |
-| POST | `/api/persons` | Person anlegen `{name}` |
-| PATCH | `/api/persons/:id` | Person umbenennen `{name}` |
-| DELETE | `/api/persons/:id` | Person löschen (nur ohne Fahrten/Zahlungen) |
+| GET | `/api/public/persons` | offene Personen für die Registrierung (ohne Konto) |
+| POST | `/api/auth/register` | `{firstName, lastName, email, password, personId?}` |
+| POST | `/api/auth/login` | `{email, password}` → Session-Cookie |
+| POST | `/api/auth/logout` | Session beenden |
+| GET | `/api/auth/me` | eigenes Konto |
+| POST | `/api/auth/forgot` | Code anfordern `{email}` (immer 200) |
+| POST | `/api/auth/verify-code` | `{email, code}` → kurzlebiger `resetToken` |
+| POST | `/api/auth/reset-password` | `{resetToken, password}` |
+| PUT | `/api/me/home` | eigene Zuhause-Adresse `{home: {label, lat, lon} \| null}` |
+| GET | `/api/admin/users` | Kontenliste (Admin) |
+| POST | `/api/admin/users/:id/password` | Passwort setzen `{password}` (Admin) |
+| DELETE | `/api/admin/users/:id` | Konto löschen (Admin) |
+| GET | `/api/state` | Personen, Fahrten, Matrix, Einstellungen, Preis, eigenes Konto |
 | POST | `/api/trips` | Fahrt anlegen `{date, driverId, passengerIds, direction, km, kmReturn}` |
-| DELETE | `/api/trips/:id` | Fahrt löschen |
-| POST | `/api/payments/settle` | `{debtorId, creditorId?}` – mit `creditorId` ein Paar, ohne alle offenen Beträge |
+| DELETE | `/api/trips/:id` | Fahrt löschen (eigene oder Admin) |
+| POST | `/api/payments/settle` | `{debtorId, creditorId?}` – eigene Schulden oder Admin |
 | GET | `/api/fuel-price` | aktuellen Preis lesen (`?refresh=1` erzwingt neu) |
-| PUT | `/api/settings` | `{plz, fuelType, consumption, priceMode, manualPrice}` |
+| PUT | `/api/settings` | `{plz, fuelType, consumption, priceMode, manualPrice}` (Admin) |
+| GET | `/api/geo/search` | Ortssuche (Photon, PLZ-gewichtet) |
+| GET | `/api/geo/route` | Strecke zwischen zwei Punkten (OSRM) |
 
 ## Starten
 
@@ -67,6 +101,8 @@ npm run dev                 # API auf :3000, Vite separat mit `npm run preview` 
 
 ## Sicherheit
 
-Es gibt bewusst keine Anmeldung – wer die URL kennt, kann Einträge ändern. Für den
-Betrieb von außen gehört deshalb eine Cloudflare-Access-Regel davor (wie bei den
-anderen Diensten auf dem NAS).
+Passwörter liegen als bcrypt-Hash (Kosten 12) in der Datenbank, Sessions als
+`httpOnly`-Cookie, damit JavaScript sie nicht auslesen kann. Der Reset-Code wird nur
+gehasht gespeichert und ist nach 15 Minuten oder 5 Fehlversuchen ungültig. Mails gehen
+nicht direkt aus der App: sie landen in `mail_queue` und werden von einem Cronjob des
+Agenten über Gmail verschickt (kein Mail-Zugang im App-Container).

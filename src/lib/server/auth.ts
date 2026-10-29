@@ -2,7 +2,20 @@ import jwt from "jsonwebtoken";
 import type { NextFunction, Request, Response } from "express";
 import { findUserById, type UserRow } from "./users.ts";
 
-const SECRET = process.env.JWT_SECRET?.trim() || "mitfahr-io-dev-secret-change-me";
+/**
+ * Signaturschlüssel für die Session-Cookies. In Produktion Pflicht: mit einem
+ * bekannten Standardwert könnte sich jeder ein gültiges Cookie bauen.
+ */
+const SECRET = process.env.JWT_SECRET?.trim() ?? "";
+if (SECRET.length < 32) {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "JWT_SECRET fehlt oder ist zu kurz (mindestens 32 Zeichen). In der .env setzen: openssl rand -hex 32"
+    );
+  }
+  console.warn("⚠️  JWT_SECRET fehlt – es wird ein Entwicklungs-Schlüssel benutzt (nur lokal!)");
+}
+const SESSION_SECRET = SECRET.length >= 32 ? SECRET : "mitfahr-io-development-only-secret-000000";
 const COOKIE_NAME = "mitfahr_session";
 const SESSION_DAYS = 30;
 
@@ -32,7 +45,7 @@ export function signSession(user: UserRow): string {
     email: user.email,
     admin: Boolean(user.is_admin),
   };
-  return jwt.sign(payload, SECRET, { expiresIn: `${SESSION_DAYS}d` });
+  return jwt.sign(payload, SESSION_SECRET, { expiresIn: `${SESSION_DAYS}d` });
 }
 
 export function setSessionCookie(res: Response, token: string): void {
@@ -53,7 +66,7 @@ export function readSession(req: Request): SessionPayload | null {
   const token = parseCookies(req.headers.cookie)[COOKIE_NAME];
   if (!token) return null;
   try {
-    const decoded = jwt.verify(token, SECRET) as unknown as SessionPayload;
+    const decoded = jwt.verify(token, SESSION_SECRET) as unknown as SessionPayload;
     if (!decoded || typeof decoded.sub !== "number") return null;
     return decoded;
   } catch {
@@ -63,12 +76,12 @@ export function readSession(req: Request): SessionPayload | null {
 
 /** Kurzlebiger Token zwischen Code-Prüfung und neuem Passwort (10 Minuten). */
 export function signResetToken(userId: number): string {
-  return jwt.sign({ reset: userId }, SECRET, { expiresIn: "10m" });
+  return jwt.sign({ reset: userId }, SESSION_SECRET, { expiresIn: "10m" });
 }
 
 export function readResetToken(token: unknown): number | null {
   try {
-    const decoded = jwt.verify(String(token ?? ""), SECRET) as unknown as { reset?: number };
+    const decoded = jwt.verify(String(token ?? ""), SESSION_SECRET) as unknown as { reset?: number };
     return typeof decoded.reset === "number" ? decoded.reset : null;
   } catch {
     return null;

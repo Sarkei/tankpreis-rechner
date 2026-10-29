@@ -46,12 +46,15 @@ export function Modal({
   title,
   children,
   footer,
+  size = "md",
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
   footer?: ReactNode;
+  /** "wide" für Tabellen (Admin-Dashboard) */
+  size?: "md" | "wide";
 }) {
   useEffect(() => {
     if (!open) return;
@@ -74,7 +77,10 @@ export function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        className="relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-zinc-800 bg-zinc-900 p-5 sm:max-w-md sm:rounded-2xl"
+        className={
+          "relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-zinc-800 bg-zinc-900 p-5 sm:rounded-2xl " +
+          (size === "wide" ? "sm:max-w-3xl" : "sm:max-w-md")
+        }
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>

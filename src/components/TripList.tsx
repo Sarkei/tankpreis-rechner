@@ -18,7 +18,18 @@ function DirectionBadge({ direction }: { direction: Trip["direction"] }) {
   );
 }
 
-export function TripList({ trips, onDelete }: { trips: Trip[]; onDelete: (trip: Trip) => void }) {
+export function TripList({
+  trips,
+  onDelete,
+  canDelete,
+  myPersonId,
+}: {
+  trips: Trip[];
+  onDelete: (trip: Trip) => void;
+  /** Nur eigene Fahrten (oder als Admin alle) dürfen gelöscht werden. */
+  canDelete: (trip: Trip) => boolean;
+  myPersonId: number | null;
+}) {
   if (trips.length === 0) {
     return (
       <Card className="p-5">
@@ -55,6 +66,7 @@ export function TripList({ trips, onDelete }: { trips: Trip[]; onDelete: (trip: 
                       <span className="inline-flex items-center gap-1 font-medium text-zinc-100">
                         <Car className="h-3.5 w-3.5 text-zinc-500" />
                         {trip.driverName}
+                        {trip.driverId === myPersonId && <span className="text-[10px] text-blue-400">du</span>}
                       </span>
                       <span className="text-zinc-500">{kmLabel(trip.km)}</span>
                       <span className="text-zinc-500">·</span>
@@ -82,13 +94,15 @@ export function TripList({ trips, onDelete }: { trips: Trip[]; onDelete: (trip: 
                       </span>
                     </div>
                   </div>
-                  <button
-                    onClick={() => onDelete(trip)}
-                    aria-label="Fahrt löschen"
-                    className="rounded-lg p-2 text-zinc-600 hover:bg-zinc-800 hover:text-red-400"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  {canDelete(trip) && (
+                    <button
+                      onClick={() => onDelete(trip)}
+                      aria-label="Fahrt löschen"
+                      className="rounded-lg p-2 text-zinc-600 hover:bg-zinc-800 hover:text-red-400"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               ))}
             </Card>
