@@ -216,7 +216,7 @@ export function SettingsDialog({
             </Button>
           </form>
 
-          <Field label="Das bin ich" hint="Grundlage für den Filter im Fahrten-Tab.">
+          <Field label="Das bin ich" hint="Wird beim Anlegen einer Fahrt als Fahrer vorbelegt.">
             <select
               value={mePersonId ?? ""}
               onChange={(event) => setMePersonId(event.target.value ? Number(event.target.value) : null)}

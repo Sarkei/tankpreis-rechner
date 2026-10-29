@@ -1,4 +1,4 @@
-import { AlertTriangle, Car, Cog, HandCoins, Plus, Route, TrendingUp, UserRound } from "lucide-react";
+import { AlertTriangle, Car, Cog, HandCoins, Plus, Route, TrendingUp } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { AppSettings, AppState, Person, Trip } from "./lib/calc.ts";
 import { api, type TripPayload } from "./lib/api.ts";
@@ -8,22 +8,17 @@ import { TripList } from "./components/TripList.tsx";
 import { DebtMatrix } from "./components/DebtMatrix.tsx";
 import { SettingsDialog } from "./components/SettingsDialog.tsx";
 import { ConfirmDialog, type ConfirmState } from "./components/ConfirmDialog.tsx";
+import { FilterMenu } from "./components/FilterMenu.tsx";
 import { Button } from "./components/ui.tsx";
 
 type Tab = "fahrten" | "zahlungen";
-type Filter = "alle" | "fahrer" | "mitfahrer";
-
-const FILTERS: { value: Filter; label: string }[] = [
-  { value: "alle", label: "Alle" },
-  { value: "fahrer", label: "Ich bin gefahren" },
-  { value: "mitfahrer", label: "Ich bin mitgefahren" },
-];
 
 export default function App() {
   const [state, setState] = useState<AppState | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("fahrten");
-  const [filter, setFilter] = useState<Filter>("alle");
+  const [driverFilter, setDriverFilter] = useState<number | null>(null);
+  const [passengerFilter, setPassengerFilter] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [tripOpen, setTripOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -88,13 +83,17 @@ export default function App() {
   const meId = settings.mePersonId;
   const me = persons.find((person) => person.id === meId) ?? null;
 
-  // kein Hook: die Liste wird nach den frühen Returns berechnet
-  const visibleTrips =
-    filter === "alle" || !meId
-      ? trips
-      : trips.filter((trip) =>
-          filter === "fahrer" ? trip.driverId === meId : trip.passengers.some((p) => p.id === meId)
-        );
+  // Namen, die jemals gefahren bzw. mitgefahren sind
+  const driverOptions = persons.filter((person) => trips.some((trip) => trip.driverId === person.id));
+  const passengerOptions = persons.filter((person) =>
+    trips.some((trip) => trip.passengers.some((passenger) => passenger.id === person.id))
+  );
+
+  const visibleTrips = trips.filter((trip) => {
+    if (driverFilter !== null && trip.driverId !== driverFilter) return false;
+    if (passengerFilter !== null && !trip.passengers.some((p) => p.id === passengerFilter)) return false;
+    return true;
+  });
 
   async function addPerson(name: string) {
     const result = await guard(() => api.addPerson(name));
@@ -265,21 +264,25 @@ export default function App() {
       {tab === "fahrten" ? (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap gap-1 rounded-xl bg-zinc-900 p-1">
-              {FILTERS.map((option) => (
+            <div className="flex flex-wrap items-center gap-1 rounded-xl bg-zinc-900 p-1">
+              <FilterMenu label="Fahrer" options={driverOptions} value={driverFilter} onChange={setDriverFilter} />
+              <FilterMenu
+                label="Mitfahrer"
+                options={passengerOptions}
+                value={passengerFilter}
+                onChange={setPassengerFilter}
+              />
+              {(driverFilter !== null || passengerFilter !== null) && (
                 <button
-                  key={option.value}
-                  onClick={() => setFilter(option.value)}
-                  className={
-                    "rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors " +
-                    (filter === option.value
-                      ? "bg-zinc-700 text-zinc-100"
-                      : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200")
-                  }
+                  onClick={() => {
+                    setDriverFilter(null);
+                    setPassengerFilter(null);
+                  }}
+                  className="rounded-lg px-2 py-1.5 text-xs text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
                 >
-                  {option.label}
+                  zurücksetzen
                 </button>
-              ))}
+              )}
             </div>
             <Button onClick={() => setTripOpen(true)} className="shrink-0">
               <Plus className="h-4 w-4" />
@@ -287,19 +290,13 @@ export default function App() {
             </Button>
           </div>
 
-          {filter !== "alle" && !meId && (
-            <div className="flex items-start gap-2 rounded-xl border border-amber-800/50 bg-amber-950/30 px-3 py-2.5 text-xs text-amber-200">
-              <UserRound className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>
-                Damit der Filter greift, musst du in den Einstellungen festlegen, wer du bist.{" "}
-                <button onClick={() => setSettingsOpen(true)} className="underline hover:text-amber-100">
-                  Einstellungen öffnen
-                </button>
-              </span>
+          {visibleTrips.length === 0 && trips.length > 0 && (driverFilter !== null || passengerFilter !== null) ? (
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5 text-sm text-zinc-400">
+              Keine Fahrt passt zu diesen Filtern.
             </div>
+          ) : (
+            <TripList trips={visibleTrips} onDelete={requestDeleteTrip} />
           )}
-
-          <TripList trips={visibleTrips} onDelete={requestDeleteTrip} />
         </div>
       ) : (
         <DebtMatrix matrix={matrix} onSettle={requestSettle} />
