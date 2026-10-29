@@ -13,11 +13,11 @@ RUN npm run build:server
 FROM node:20-alpine
 WORKDIR /app
 RUN apk add --no-cache libc6-compat wget
+ENV TZ=Europe/Berlin
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev --legacy-peer-deps
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server.js ./server.js
-RUN mkdir -p /app/uploads/avatars
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
   CMD wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1
