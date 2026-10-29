@@ -45,7 +45,7 @@ function asKm(value: unknown, label: string): number {
 }
 
 async function assertPersonExists(id: number, label = "Person"): Promise<void> {
-  const { rows } = await pool.query(`SELECT 1 FROM persons WHERE id = $1`, [id]);
+  const { rows } = await pool.query(`SELECT 1 FROM mf_persons WHERE id = $1`, [id]);
   if (rows.length === 0) throw new HttpError(400, `${label} nicht gefunden`);
 }
 
@@ -78,7 +78,7 @@ async function startServer() {
     wrap(async (req, res) => {
       const name = asName(req.body?.name);
       const { rows } = await pool.query<{ id: number; name: string }>(
-        `INSERT INTO persons (name) VALUES ($1) RETURNING id, name`,
+        `INSERT INTO mf_persons (name) VALUES ($1) RETURNING id, name`,
         [name]
       );
       res.status(201).json({ person: { id: Number(rows[0].id), name: rows[0].name }, state: await loadState() });
@@ -92,7 +92,7 @@ async function startServer() {
       if (!id) throw new HttpError(400, "Ungültige ID");
       const name = asName(req.body?.name);
       await assertPersonExists(id);
-      await pool.query(`UPDATE persons SET name = $1 WHERE id = $2`, [name, id]);
+      await pool.query(`UPDATE mf_persons SET name = $1 WHERE id = $2`, [name, id]);
       res.json({ state: await loadState() });
     })
   );
@@ -106,16 +106,16 @@ async function startServer() {
 
       const used = await pool.query<{ n: string }>(
         `SELECT (
-           (SELECT COUNT(*) FROM trips WHERE driver_id = $1) +
-           (SELECT COUNT(*) FROM trip_passengers WHERE person_id = $1) +
-           (SELECT COUNT(*) FROM payments WHERE debtor_id = $1 OR creditor_id = $1)
+           (SELECT COUNT(*) FROM mf_trips WHERE driver_id = $1) +
+           (SELECT COUNT(*) FROM mf_trip_passengers WHERE person_id = $1) +
+           (SELECT COUNT(*) FROM mf_payments WHERE debtor_id = $1 OR creditor_id = $1)
          )::text AS n`,
         [id]
       );
       if (Number(used.rows[0].n) > 0) {
         throw new HttpError(409, "Person kommt in Fahrten oder Zahlungen vor und kann nicht gelöscht werden");
       }
-      await pool.query(`DELETE FROM persons WHERE id = $1`, [id]);
+      await pool.query(`DELETE FROM mf_persons WHERE id = $1`, [id]);
       res.json({ state: await loadState() });
     })
   );
@@ -165,13 +165,13 @@ async function startServer() {
         await client.query("BEGIN");
         for (const leg of legs) {
           const { rows } = await client.query<{ id: number }>(
-            `INSERT INTO trips (trip_date, direction, km, driver_id, fuel_price, consumption, note)
+            `INSERT INTO mf_trips (trip_date, direction, km, driver_id, fuel_price, consumption, note)
              VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
             [tripDate, leg.direction, leg.km, driverId, fuelPrice, settings.consumption, note]
           );
           const tripId = rows[0].id;
           for (const personId of passengerIds) {
-            await client.query(`INSERT INTO trip_passengers (trip_id, person_id) VALUES ($1, $2)`, [
+            await client.query(`INSERT INTO mf_trip_passengers (trip_id, person_id) VALUES ($1, $2)`, [
               tripId,
               personId,
             ]);
@@ -194,7 +194,7 @@ async function startServer() {
     wrap(async (req, res) => {
       const id = asId(req.params.id);
       if (!id) throw new HttpError(400, "Ungültige ID");
-      const deleted = await pool.query(`DELETE FROM trips WHERE id = $1`, [id]);
+      const deleted = await pool.query(`DELETE FROM mf_trips WHERE id = $1`, [id]);
       if (deleted.rowCount === 0) throw new HttpError(404, "Fahrt nicht gefunden");
       res.json({ state: await loadState() });
     })
@@ -212,7 +212,7 @@ async function startServer() {
       const [trips, paidRows, { rows: personRows }] = await Promise.all([
         loadTrips(),
         loadPayments(),
-        pool.query<{ id: number; name: string }>(`SELECT id, name FROM persons ORDER BY name ASC`),
+        pool.query<{ id: number; name: string }>(`SELECT id, name FROM mf_persons ORDER BY name ASC`),
       ]);
       const persons = personRows.map((r) => ({ id: Number(r.id), name: r.name }));
       const matrix = buildMatrix(persons, trips, chargePairs(trips), paidRows);
@@ -231,7 +231,7 @@ async function startServer() {
         await client.query("BEGIN");
         for (const entry of settled) {
           await client.query(
-            `INSERT INTO payments (debtor_id, creditor_id, amount, paid_on) VALUES ($1, $2, $3, CURRENT_DATE)`,
+            `INSERT INTO mf_payments (debtor_id, creditor_id, amount, paid_on) VALUES ($1, $2, $3, CURRENT_DATE)`,
             [entry.debtorId, entry.creditorId, entry.amount]
           );
         }

@@ -12,7 +12,7 @@ export interface AppState {
 }
 
 export async function loadPersons(): Promise<Person[]> {
-  const { rows } = await pool.query<{ id: number; name: string }>(`SELECT id, name FROM persons ORDER BY name ASC`);
+  const { rows } = await pool.query<{ id: number; name: string }>(`SELECT id, name FROM mf_persons ORDER BY name ASC`);
   return rows.map((r) => ({ id: Number(r.id), name: r.name }));
 }
 
@@ -33,15 +33,15 @@ export async function loadTrips(): Promise<Trip[]> {
   const { rows } = await pool.query<TripRow>(`
     SELECT t.id, to_char(t.trip_date, 'YYYY-MM-DD') AS trip_date, t.direction, t.km,
            t.driver_id, p.name AS driver_name, t.fuel_price, t.consumption, t.note, t.created_at
-    FROM trips t
-    JOIN persons p ON p.id = t.driver_id
+    FROM mf_trips t
+    JOIN mf_persons p ON p.id = t.driver_id
     ORDER BY t.trip_date DESC, t.id DESC
   `);
 
   const { rows: passengerRows } = await pool.query<{ trip_id: number; id: number; name: string }>(`
     SELECT tp.trip_id, p.id, p.name
-    FROM trip_passengers tp
-    JOIN persons p ON p.id = tp.person_id
+    FROM mf_trip_passengers tp
+    JOIN mf_persons p ON p.id = tp.person_id
     ORDER BY p.name ASC
   `);
 
@@ -79,7 +79,7 @@ export async function loadTrips(): Promise<Trip[]> {
 export async function loadPayments(): Promise<{ creditorId: number; debtorId: number; charged: number }[]> {
   const { rows } = await pool.query<{ creditor_id: number; debtor_id: number; total: string }>(`
     SELECT creditor_id, debtor_id, SUM(amount)::text AS total
-    FROM payments
+    FROM mf_payments
     GROUP BY creditor_id, debtor_id
   `);
   return rows.map((r) => ({

@@ -25,7 +25,7 @@ export async function initDb(): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query(`
-      CREATE TABLE IF NOT EXISTS persons (
+      CREATE TABLE IF NOT EXISTS mf_persons (
         id SERIAL PRIMARY KEY,
         name VARCHAR(60) NOT NULL UNIQUE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -33,12 +33,12 @@ export async function initDb(): Promise<void> {
     `);
 
     await client.query(`
-      CREATE TABLE IF NOT EXISTS trips (
+      CREATE TABLE IF NOT EXISTS mf_trips (
         id SERIAL PRIMARY KEY,
         trip_date DATE NOT NULL DEFAULT CURRENT_DATE,
         direction VARCHAR(10) NOT NULL CHECK (direction IN ('HIN', 'RUECK')),
         km NUMERIC(7,2) NOT NULL CHECK (km > 0),
-        driver_id INTEGER NOT NULL REFERENCES persons(id) ON DELETE RESTRICT,
+        driver_id INTEGER NOT NULL REFERENCES mf_persons(id) ON DELETE RESTRICT,
         fuel_price NUMERIC(6,3) NOT NULL CHECK (fuel_price > 0),
         consumption NUMERIC(5,2) NOT NULL CHECK (consumption > 0),
         note TEXT,
@@ -47,18 +47,18 @@ export async function initDb(): Promise<void> {
     `);
 
     await client.query(`
-      CREATE TABLE IF NOT EXISTS trip_passengers (
-        trip_id INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
-        person_id INTEGER NOT NULL REFERENCES persons(id) ON DELETE RESTRICT,
+      CREATE TABLE IF NOT EXISTS mf_trip_passengers (
+        trip_id INTEGER NOT NULL REFERENCES mf_trips(id) ON DELETE CASCADE,
+        person_id INTEGER NOT NULL REFERENCES mf_persons(id) ON DELETE RESTRICT,
         PRIMARY KEY (trip_id, person_id)
       )
     `);
 
     await client.query(`
-      CREATE TABLE IF NOT EXISTS payments (
+      CREATE TABLE IF NOT EXISTS mf_payments (
         id SERIAL PRIMARY KEY,
-        debtor_id INTEGER NOT NULL REFERENCES persons(id) ON DELETE RESTRICT,
-        creditor_id INTEGER NOT NULL REFERENCES persons(id) ON DELETE RESTRICT,
+        debtor_id INTEGER NOT NULL REFERENCES mf_persons(id) ON DELETE RESTRICT,
+        creditor_id INTEGER NOT NULL REFERENCES mf_persons(id) ON DELETE RESTRICT,
         amount NUMERIC(8,2) NOT NULL CHECK (amount > 0),
         paid_on DATE NOT NULL DEFAULT CURRENT_DATE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -66,14 +66,14 @@ export async function initDb(): Promise<void> {
     `);
 
     await client.query(`
-      CREATE TABLE IF NOT EXISTS settings (
+      CREATE TABLE IF NOT EXISTS mf_settings (
         key VARCHAR(40) PRIMARY KEY,
         value TEXT NOT NULL
       )
     `);
 
     await client.query(`
-      CREATE TABLE IF NOT EXISTS fuel_price_cache (
+      CREATE TABLE IF NOT EXISTS mf_fuel_price_cache (
         id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
         price NUMERIC(6,3),
         fuel_type VARCHAR(20) NOT NULL,
@@ -85,9 +85,9 @@ export async function initDb(): Promise<void> {
       )
     `);
 
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_trips_date ON trips(trip_date DESC)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_trips_driver ON trips(driver_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_payments_pair ON payments(debtor_id, creditor_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_mf_trips_date ON mf_trips(trip_date DESC)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_mf_trips_driver ON mf_trips(driver_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_mf_payments_pair ON mf_payments(debtor_id, creditor_id)`);
 
     console.log("✅ Datenbankschema bereit");
   } finally {
