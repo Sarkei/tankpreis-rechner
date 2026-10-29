@@ -41,6 +41,8 @@ export async function initDb(): Promise<void> {
         driver_id INTEGER NOT NULL REFERENCES persons(id) ON DELETE RESTRICT,
         fuel_price NUMERIC(6,3) NOT NULL CHECK (fuel_price > 0),
         consumption NUMERIC(5,2) NOT NULL CHECK (consumption > 0),
+        from_label VARCHAR(200),
+        to_label VARCHAR(200),
         note TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
@@ -83,6 +85,12 @@ export async function initDb(): Promise<void> {
         fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         error TEXT
       )
+    `);
+
+    await client.query(`
+      ALTER TABLE trips
+        ADD COLUMN IF NOT EXISTS from_label VARCHAR(200),
+        ADD COLUMN IF NOT EXISTS to_label VARCHAR(200)
     `);
 
     await client.query(`CREATE INDEX IF NOT EXISTS idx_trips_date ON trips(trip_date DESC)`);

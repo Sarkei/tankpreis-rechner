@@ -8,6 +8,7 @@ import { getFuelPrice, resolveTripPrice } from "./src/lib/server/fuelPrice.ts";
 import { getSettings, saveSettings, type FuelTypeKey } from "./src/lib/server/settings.ts";
 import { chargePairs, loadPayments, loadState, loadTrips } from "./src/lib/server/state.ts";
 import { buildMatrix, round2 } from "./src/lib/calc.ts";
+import { routeKm, searchPlaces } from "./src/lib/server/geo.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3000);
@@ -42,6 +43,16 @@ function asKm(value: unknown, label: string): number {
   if (!Number.isFinite(km) || km <= 0) throw new HttpError(400, `${label} muss größer als 0 sein`);
   if (km > 5000) throw new HttpError(400, `${label} ist unrealistisch groß (max. 5000 km)`);
   return round2(km);
+}
+
+function parseLatLon(value: unknown): { lat: number; lon: number } | null {
+  const text = String(value ?? "");
+  const match = /^(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/.exec(text);
+  if (!match) return null;
+  const lat = Number(match[1]);
+  const lon = Number(match[2]);
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+  return { lat, lon };
 }
 
 async function assertPersonExists(id: number, label = "Person"): Promise<void> {
@@ -145,6 +156,8 @@ async function startServer() {
       const date = String(req.body?.date ?? "").trim();
       const tripDate = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toISOString().slice(0, 10);
       const note = req.body?.note ? String(req.body.note).slice(0, 200) : null;
+      const fromLabel = req.body?.fromLabel ? String(req.body.fromLabel).slice(0, 200) : null;
+      const toLabel = req.body?.toLabel ? String(req.body.toLabel).slice(0, 200) : null;
 
       const fuelPrice = await resolveTripPrice();
       if (!fuelPrice) {
@@ -165,9 +178,19 @@ async function startServer() {
         await client.query("BEGIN");
         for (const leg of legs) {
           const { rows } = await client.query<{ id: number }>(
-            `INSERT INTO trips (trip_date, direction, km, driver_id, fuel_price, consumption, note)
-             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-            [tripDate, leg.direction, leg.km, driverId, fuelPrice, settings.consumption, note]
+            `INSERT INTO trips (trip_date, direction, km, driver_id, fuel_price, consumption, from_label, to_label, note)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+            [
+              tripDate,
+              leg.direction,
+              leg.km,
+              driverId,
+              fuelPrice,
+              settings.consumption,
+              fromLabel,
+              toLabel,
+              note,
+            ]
           );
           const tripId = rows[0].id;
           for (const personId of passengerIds) {
@@ -248,6 +271,37 @@ async function startServer() {
     })
   );
 
+  // ── Orte und Strecken (OpenStreetMap) ─────────────────────────────────────
+  app.get(
+    "/api/geo/search",
+    wrap(async (req, res) => {
+      const q = String(req.query.q ?? "").trim();
+      if (q.length < 3) {
+        res.json({ results: [] });
+        return;
+      }
+      try {
+        res.json({ results: await searchPlaces(q) });
+      } catch (err) {
+        throw new HttpError(503, err instanceof Error ? err.message : "Ortssuche nicht erreichbar");
+      }
+    })
+  );
+
+  app.get(
+    "/api/geo/route",
+    wrap(async (req, res) => {
+      const from = parseLatLon(req.query.from);
+      const to = parseLatLon(req.query.to);
+      if (!from || !to) throw new HttpError(400, 'from/to müssen als "lat,lon" übergeben werden');
+      try {
+        res.json({ km: await routeKm(from, to) });
+      } catch (err) {
+        throw new HttpError(503, err instanceof Error ? err.message : "Streckensuche nicht erreichbar");
+      }
+    })
+  );
+
   // ── Tankpreis ─────────────────────────────────────────────────────────────
   app.get(
     "/api/fuel-price",
@@ -272,6 +326,12 @@ async function startServer() {
             req.body?.manualPrice === undefined || req.body?.manualPrice === null
               ? undefined
               : Number(req.body.manualPrice),
+          mePersonId:
+            req.body?.mePersonId === undefined
+              ? undefined
+              : req.body.mePersonId === null
+                ? null
+                : Number(req.body.mePersonId),
         });
       } catch (err) {
         throw new HttpError(400, err instanceof Error ? err.message : "Einstellungen ungültig");

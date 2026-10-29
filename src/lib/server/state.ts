@@ -25,6 +25,8 @@ interface TripRow {
   driver_name: string;
   fuel_price: string;
   consumption: string;
+  from_label: string | null;
+  to_label: string | null;
   note: string | null;
   created_at: string;
 }
@@ -32,7 +34,8 @@ interface TripRow {
 export async function loadTrips(): Promise<Trip[]> {
   const { rows } = await pool.query<TripRow>(`
     SELECT t.id, to_char(t.trip_date, 'YYYY-MM-DD') AS trip_date, t.direction, t.km,
-           t.driver_id, p.name AS driver_name, t.fuel_price, t.consumption, t.note, t.created_at
+           t.driver_id, p.name AS driver_name, t.fuel_price, t.consumption,
+           t.from_label, t.to_label, t.note, t.created_at
     FROM trips t
     JOIN persons p ON p.id = t.driver_id
     ORDER BY t.trip_date DESC, t.id DESC
@@ -70,6 +73,8 @@ export async function loadTrips(): Promise<Trip[]> {
       cost,
       share: sharePerPerson(cost, passengers.length + 1),
       passengers,
+      fromLabel: row.from_label,
+      toLabel: row.to_label,
       note: row.note,
       createdAt: row.created_at,
     };

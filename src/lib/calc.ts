@@ -38,6 +38,8 @@ export interface AppSettings {
   consumption: number;
   priceMode: "auto" | "manual";
   manualPrice: number | null;
+  /** Person, die "ich" ist – Grundlage für den Fahrten-Filter. */
+  mePersonId: number | null;
 }
 
 export interface FuelPriceState {
@@ -71,6 +73,8 @@ export interface Trip {
   cost: number;
   share: number;
   passengers: TripPassenger[];
+  fromLabel: string | null;
+  toLabel: string | null;
   note: string | null;
   createdAt: string;
 }

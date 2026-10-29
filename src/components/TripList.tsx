@@ -1,4 +1,4 @@
-import { ArrowLeftRight, ArrowRight, Car, Trash2, Users } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, Car, MapPin, Trash2, Users } from "lucide-react";
 import type { Trip } from "../lib/calc.ts";
 import { dayLabel, eur, kmLabel } from "../lib/format.ts";
 import { Card } from "./ui.tsx";
@@ -60,6 +60,14 @@ export function TripList({ trips, onDelete }: { trips: Trip[]; onDelete: (trip: 
                       <span className="text-zinc-500">·</span>
                       <span className="text-zinc-400">{eur(trip.cost)}</span>
                     </div>
+                    {(trip.fromLabel || trip.toLabel) && (
+                      <div className="mt-1 flex items-start gap-1 text-xs text-zinc-400">
+                        <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-zinc-600" />
+                        <span className="line-clamp-2">
+                          {trip.fromLabel ?? "?"} → {trip.toLabel ?? "?"}
+                        </span>
+                      </div>
+                    )}
                     <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-zinc-500">
                       <span className="inline-flex items-center gap-1">
                         <Users className="h-3 w-3" />
