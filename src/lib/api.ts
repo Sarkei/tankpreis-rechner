@@ -1,4 +1,4 @@
-import type { AppState } from "./calc.ts";
+import type { AdminUserRow, AppState, Person } from "./calc.ts";
 
 export class ApiError extends Error {
   status: number;
@@ -66,6 +66,49 @@ export const api = {
 
   saveSettings: (patch: Partial<AppState["settings"]>) =>
     request<{ state: AppState }>("/api/settings", { method: "PUT", body: patch }),
+
+  // ── Anmeldung ──────────────────────────────────────────────────────────
+  publicPersons: () => request<{ persons: Person[] }>("/api/public/persons"),
+
+  register: (payload: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    personId: number | null;
+  }) => request<{ state: AppState }>("/api/auth/register", { method: "POST", body: payload }),
+
+  login: (email: string, password: string) =>
+    request<{ state: AppState }>("/api/auth/login", { method: "POST", body: { email, password } }),
+
+  logout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST", body: {} }),
+
+  forgotPassword: (email: string) =>
+    request<{ ok: boolean }>("/api/auth/forgot", { method: "POST", body: { email } }),
+
+  verifyCode: (email: string, code: string) =>
+    request<{ resetToken: string }>("/api/auth/verify-code", { method: "POST", body: { email, code } }),
+
+  resetPassword: (resetToken: string, password: string) =>
+    request<{ state: AppState | null }>("/api/auth/reset-password", {
+      method: "POST",
+      body: { resetToken, password },
+    }),
+
+  saveHome: (home: { label: string; lat: number; lon: number } | null) =>
+    request<{ state: AppState }>("/api/me/home", { method: "PUT", body: { home } }),
+
+  // ── Admin ──────────────────────────────────────────────────────────────
+  adminUsers: () => request<{ users: AdminUserRow[] }>("/api/admin/users"),
+
+  adminSetPassword: (id: number, password: string) =>
+    request<{ ok: boolean; email: string }>(`/api/admin/users/${id}/password`, {
+      method: "POST",
+      body: { password },
+    }),
+
+  adminDeleteUser: (id: number) =>
+    request<{ ok: boolean; personKept: boolean }>(`/api/admin/users/${id}`, { method: "DELETE" }),
 
   searchPlaces: (query: string) => request<{ results: Place[] }>(`/api/geo/search?q=${encodeURIComponent(query)}`),
 

@@ -9,7 +9,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   consumption: Number(process.env.DEFAULT_CONSUMPTION ?? 8),
   priceMode: "auto",
   manualPrice: null,
-  mePersonId: null,
 };
 
 export const FUEL_TYPE_LABELS: Record<FuelTypeKey, string> = {
@@ -24,7 +23,6 @@ export async function getSettings(): Promise<AppSettings> {
   const fuelType = map.get("fuel_type");
   const priceMode = map.get("price_mode");
   const manualPrice = map.get("manual_price");
-  const mePersonId = map.get("me_person_id");
 
   return {
     plz: map.get("plz") ?? DEFAULT_SETTINGS.plz,
@@ -35,7 +33,6 @@ export async function getSettings(): Promise<AppSettings> {
     consumption: Number(map.get("consumption") ?? DEFAULT_SETTINGS.consumption),
     priceMode: priceMode === "manual" ? "manual" : "auto",
     manualPrice: manualPrice ? Number(manualPrice) : null,
-    mePersonId: mePersonId && /^\d+$/.test(mePersonId) ? Number(mePersonId) : null,
   };
 }
 
@@ -47,17 +44,12 @@ export async function saveSettings(patch: Partial<AppSettings>): Promise<AppSett
     consumption: patch.consumption ?? current.consumption,
     priceMode: patch.priceMode ?? current.priceMode,
     manualPrice: patch.manualPrice === undefined ? current.manualPrice : patch.manualPrice,
-    mePersonId: patch.mePersonId === undefined ? current.mePersonId : patch.mePersonId,
   };
 
   if (!/^\d{5}$/.test(next.plz)) throw new Error("PLZ muss aus 5 Ziffern bestehen");
   if (!(next.consumption > 0) || next.consumption > 30) throw new Error("Verbrauch muss zwischen 0 und 30 l/100 km liegen");
   if (next.priceMode === "manual" && !(Number(next.manualPrice) > 0)) {
     throw new Error("Manueller Preis fehlt");
-  }
-  if (next.mePersonId !== null) {
-    const { rows } = await pool.query(`SELECT 1 FROM persons WHERE id = $1`, [next.mePersonId]);
-    if (rows.length === 0) throw new Error("Diese Person gibt es nicht");
   }
 
   const entries: [string, string][] = [
@@ -66,7 +58,6 @@ export async function saveSettings(patch: Partial<AppSettings>): Promise<AppSett
     ["consumption", String(next.consumption)],
     ["price_mode", next.priceMode],
     ["manual_price", next.manualPrice ? String(next.manualPrice) : ""],
-    ["me_person_id", next.mePersonId ? String(next.mePersonId) : ""],
   ];
 
   for (const [key, value] of entries) {

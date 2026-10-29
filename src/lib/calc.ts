@@ -28,6 +28,38 @@ export interface AppState {
   matrix: Matrix;
   settings: AppSettings;
   fuelPrice: FuelPriceState;
+  me: MeUser | null;
+}
+
+export interface HomePlace {
+  label: string;
+  lat: number;
+  lon: number;
+}
+
+export interface MeUser {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  isAdmin: boolean;
+  personId: number | null;
+  home: HomePlace | null;
+}
+
+export interface AdminUserRow {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  isAdmin: boolean;
+  isActive: boolean;
+  personId: number | null;
+  personName: string | null;
+  createdAt: string;
+  lastLoginAt: string | null;
+  tripsAsDriver: number;
+  tripsAsPassenger: number;
 }
 
 export type FuelTypeKey = "diesel" | "e10" | "superplus";
@@ -38,8 +70,6 @@ export interface AppSettings {
   consumption: number;
   priceMode: "auto" | "manual";
   manualPrice: number | null;
-  /** Person, die "ich" ist – Grundlage für den Fahrten-Filter. */
-  mePersonId: number | null;
 }
 
 export interface FuelPriceState {

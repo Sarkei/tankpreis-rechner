@@ -1,0 +1,319 @@
+import { ArrowLeft, Car, KeyRound, LogIn, Mail, ShieldCheck, UserPlus } from "lucide-react";
+import { useState } from "react";
+import type { AppState, Person } from "../lib/calc.ts";
+import { api } from "../lib/api.ts";
+import { Button, Field } from "../components/ui.tsx";
+
+type Mode = "login" | "register" | "forgot";
+
+export function AuthScreen({
+  persons,
+  onAuthenticated,
+  initialMode = "login",
+}: {
+  persons: Person[];
+  onAuthenticated: (state: AppState) => void;
+  initialMode?: Mode;
+}) {
+  const [mode, setMode] = useState<Mode>(initialMode);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+
+  // Login
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+
+  // Registrierung
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [personId, setPersonId] = useState<string>("");
+
+  // Passwort vergessen
+  const [step, setStep] = useState<"mail" | "code" | "password">("mail");
+  const [resetEmail, setResetEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+
+  async function run(action: () => Promise<void>) {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Etwas ist schiefgelaufen");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function switchMode(next: Mode) {
+    setMode(next);
+    setError(null);
+    setInfo(null);
+    setStep("mail");
+  }
+
+  return (
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-4 py-10">
+      <div className="mb-6 text-center">
+        <h1 className="flex items-center justify-center gap-2 text-2xl font-semibold text-zinc-50">
+          <Car className="h-6 w-6 text-blue-400" />
+          MitFahr.io
+        </h1>
+        <p className="mt-1 text-sm text-zinc-500">Fahrgemeinschaft abrechnen</p>
+      </div>
+
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+        {mode === "login" && (
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void run(async () => {
+                const { state } = await api.login(loginEmail, loginPassword);
+                onAuthenticated(state);
+              });
+            }}
+          >
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-100">
+              <LogIn className="h-4 w-4 text-blue-400" />
+              Anmelden
+            </h2>
+            <Field label="E-Mail">
+              <input
+                type="email"
+                autoComplete="email"
+                value={loginEmail}
+                onChange={(event) => setLoginEmail(event.target.value)}
+                placeholder="name@beispiel.de"
+                required
+              />
+            </Field>
+            <Field label="Passwort">
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={loginPassword}
+                onChange={(event) => setLoginPassword(event.target.value)}
+                placeholder="••••••••"
+                required
+              />
+            </Field>
+            {error && <p className="text-sm text-red-400">{error}</p>}
+            <Button type="submit" className="w-full" disabled={busy}>
+              {busy ? "Anmelden…" : "Anmelden"}
+            </Button>
+            <div className="flex items-center justify-between text-xs">
+              <button type="button" onClick={() => switchMode("register")} className="text-blue-400 hover:text-blue-300">
+                Neues Konto anlegen
+              </button>
+              <button type="button" onClick={() => switchMode("forgot")} className="text-zinc-400 hover:text-zinc-200">
+                Passwort vergessen?
+              </button>
+            </div>
+          </form>
+        )}
+
+        {mode === "register" && (
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void run(async () => {
+                const { state } = await api.register({
+                  firstName,
+                  lastName,
+                  email,
+                  password,
+                  personId: personId ? Number(personId) : null,
+                });
+                onAuthenticated(state);
+              });
+            }}
+          >
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-100">
+              <UserPlus className="h-4 w-4 text-blue-400" />
+              Konto anlegen
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Vorname">
+                <input value={firstName} onChange={(event) => setFirstName(event.target.value)} required />
+              </Field>
+              <Field label="Nachname">
+                <input value={lastName} onChange={(event) => setLastName(event.target.value)} required />
+              </Field>
+            </div>
+            <Field label="E-Mail">
+              <input
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="name@beispiel.de"
+                required
+              />
+            </Field>
+            <Field label="Passwort" hint="Mindestens 8 Zeichen.">
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                minLength={8}
+                required
+              />
+            </Field>
+            {persons.length > 0 && (
+              <Field label="Schon in der Liste?" hint="Damit deine bisherigen Fahrten zu dir gehören.">
+                <select value={personId} onChange={(event) => setPersonId(event.target.value)}>
+                  <option value="">– neu anlegen als {`${firstName} ${lastName}`.trim()} –</option>
+                  {persons.map((person) => (
+                    <option key={person.id} value={person.id}>
+                      {person.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
+            {error && <p className="text-sm text-red-400">{error}</p>}
+            <Button type="submit" className="w-full" disabled={busy}>
+              {busy ? "Anlegen…" : "Konto anlegen"}
+            </Button>
+            <button
+              type="button"
+              onClick={() => switchMode("login")}
+              className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200"
+            >
+              <ArrowLeft className="h-3 w-3" /> zurück zur Anmeldung
+            </button>
+          </form>
+        )}
+
+        {mode === "forgot" && (
+          <div className="space-y-4">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-100">
+              <KeyRound className="h-4 w-4 text-blue-400" />
+              Passwort zurücksetzen
+            </h2>
+
+            {step === "mail" && (
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void run(async () => {
+                    await api.forgotPassword(resetEmail);
+                    setStep("code");
+                    setInfo("Wenn es die Adresse gibt, ist der Code unterwegs – er gilt 15 Minuten.");
+                  });
+                }}
+              >
+                <Field label="E-Mail deines Kontos">
+                  <input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(event) => setResetEmail(event.target.value)}
+                    placeholder="name@beispiel.de"
+                    required
+                  />
+                </Field>
+                {error && <p className="text-sm text-red-400">{error}</p>}
+                <Button type="submit" className="w-full" disabled={busy}>
+                  <Mail className="h-4 w-4" />
+                  {busy ? "Sende…" : "Code schicken"}
+                </Button>
+              </form>
+            )}
+
+            {step === "code" && (
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void run(async () => {
+                    const { resetToken: token } = await api.verifyCode(resetEmail, code);
+                    setResetToken(token);
+                    setStep("password");
+                    setInfo(null);
+                  });
+                }}
+              >
+                {info && <p className="text-xs text-emerald-400">{info}</p>}
+                <Field label="6-stelliger Code aus der Mail">
+                  <input
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={code}
+                    onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="123456"
+                    className="text-center text-lg tracking-[0.4em]"
+                    required
+                  />
+                </Field>
+                {error && <p className="text-sm text-red-400">{error}</p>}
+                <Button type="submit" className="w-full" disabled={busy || code.length !== 6}>
+                  {busy ? "Prüfe…" : "Code prüfen"}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep("mail");
+                    setInfo(null);
+                    setError(null);
+                  }}
+                  className="text-xs text-zinc-400 hover:text-zinc-200"
+                >
+                  anderen Code anfordern
+                </button>
+              </form>
+            )}
+
+            {step === "password" && (
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void run(async () => {
+                    const { state } = await api.resetPassword(resetToken, newPassword);
+                    if (state) onAuthenticated(state);
+                    else switchMode("login");
+                  });
+                }}
+              >
+                <p className="flex items-center gap-1.5 text-xs text-emerald-400">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Code bestätigt – jetzt neues Passwort setzen
+                </p>
+                <Field label="Neues Passwort" hint="Mindestens 8 Zeichen.">
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                    minLength={8}
+                    required
+                  />
+                </Field>
+                {error && <p className="text-sm text-red-400">{error}</p>}
+                <Button type="submit" className="w-full" disabled={busy}>
+                  {busy ? "Speichere…" : "Passwort speichern"}
+                </Button>
+              </form>
+            )}
+
+            <button
+              type="button"
+              onClick={() => switchMode("login")}
+              className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200"
+            >
+              <ArrowLeft className="h-3 w-3" /> zurück zur Anmeldung
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

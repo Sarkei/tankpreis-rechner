@@ -93,6 +93,61 @@ export async function initDb(): Promise<void> {
         ADD COLUMN IF NOT EXISTS to_label VARCHAR(200)
     `);
 
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        first_name VARCHAR(80) NOT NULL,
+        last_name VARCHAR(80) NOT NULL,
+        is_admin BOOLEAN NOT NULL DEFAULT false,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        person_id INTEGER REFERENCES persons(id) ON DELETE SET NULL,
+        home_label VARCHAR(200),
+        home_lat NUMERIC(9,6),
+        home_lon NUMERIC(9,6),
+        last_login_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS reset_codes (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        code_hash VARCHAR(255) NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        attempts INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS mail_queue (
+        id SERIAL PRIMARY KEY,
+        to_email VARCHAR(255) NOT NULL,
+        subject VARCHAR(200) NOT NULL,
+        body TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        sent_at TIMESTAMPTZ,
+        error TEXT
+      )
+    `);
+
+    await client.query(`
+      ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true,
+        ADD COLUMN IF NOT EXISTS person_id INTEGER REFERENCES persons(id) ON DELETE SET NULL,
+        ADD COLUMN IF NOT EXISTS home_label VARCHAR(200),
+        ADD COLUMN IF NOT EXISTS home_lat NUMERIC(9,6),
+        ADD COLUMN IF NOT EXISTS home_lon NUMERIC(9,6),
+        ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ
+    `);
+
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_mail_queue_pending ON mail_queue(sent_at) WHERE sent_at IS NULL`);
+
     await client.query(`CREATE INDEX IF NOT EXISTS idx_trips_date ON trips(trip_date DESC)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_trips_driver ON trips(driver_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_payments_pair ON payments(debtor_id, creditor_id)`);
