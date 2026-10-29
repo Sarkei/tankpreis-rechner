@@ -1,6 +1,7 @@
 import { Plus, RefreshCw, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { AppSettings, FuelPriceState, Person } from "../lib/calc.ts";
+import type { AppSettings, FuelPriceState, HomePlace, MeUser, Person } from "../lib/calc.ts";
+import { RouteField } from "./RouteField.tsx";
 import { ageLabel, pricePerLiter } from "../lib/format.ts";
 import { Button, Field, Modal, Segmented } from "./ui.tsx";
 
@@ -15,12 +16,14 @@ export function SettingsDialog({
   settings,
   fuelPrice,
   persons,
+  me,
   busy,
   onClose,
   onSave,
   onRefresh,
   onAddPerson,
   onDeletePerson,
+  onSaveHome,
 }: {
   open: boolean;
   settings: AppSettings;
@@ -32,14 +35,17 @@ export function SettingsDialog({
   onRefresh: () => Promise<void>;
   onAddPerson: (name: string) => Promise<void>;
   onDeletePerson: (person: Person) => void;
+  me: MeUser | null;
+  onSaveHome: (home: HomePlace | null) => Promise<void>;
 }) {
   const [plz, setPlz] = useState(settings.plz);
   const [consumption, setConsumption] = useState(String(settings.consumption));
   const [fuelType, setFuelType] = useState(settings.fuelType);
   const [priceMode, setPriceMode] = useState(settings.priceMode);
   const [manualPrice, setManualPrice] = useState(settings.manualPrice ? String(settings.manualPrice) : "");
-  const [mePersonId, setMePersonId] = useState<number | null>(settings.mePersonId);
   const [newPerson, setNewPerson] = useState("");
+  const [home, setHome] = useState<HomePlace | null>(me?.home ?? null);
+  const [homeBusy, setHomeBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -48,8 +54,8 @@ export function SettingsDialog({
     setFuelType(settings.fuelType);
     setPriceMode(settings.priceMode);
     setManualPrice(settings.manualPrice ? String(settings.manualPrice) : "");
-    setMePersonId(settings.mePersonId);
     setNewPerson("");
+    setHome(me?.home ?? null);
   }, [open, settings]);
 
   return (
@@ -70,7 +76,6 @@ export function SettingsDialog({
                 fuelType,
                 priceMode,
                 manualPrice: priceMode === "manual" ? Number(manualPrice) : null,
-                mePersonId,
               })
             }
             disabled={busy}
@@ -216,19 +221,48 @@ export function SettingsDialog({
             </Button>
           </form>
 
-          <Field label="Das bin ich" hint="Wird beim Anlegen einer Fahrt als Fahrer vorbelegt.">
-            <select
-              value={mePersonId ?? ""}
-              onChange={(event) => setMePersonId(event.target.value ? Number(event.target.value) : null)}
-            >
-              <option value="">– nicht festgelegt –</option>
-              {persons.map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.name}
-                </option>
-              ))}
-            </select>
-          </Field>
+        </div>
+
+        <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950 p-3">
+          <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Meine Zuhause-Adresse</span>
+          <RouteField
+            label="Adresse"
+            value={home}
+            onChange={setHome}
+            placeholder="z. B. Bahnhofstraße 5 Traunstein"
+          />
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-zinc-500">
+              {me?.home ? "Steht beim Anlegen einer Fahrt als Schnellwahl bereit." : "Noch keine Adresse gespeichert."}
+            </p>
+            <div className="flex gap-2">
+              {home && (
+                <Button
+                  variant="secondary"
+                  disabled={homeBusy}
+                  onClick={async () => {
+                    setHomeBusy(true);
+                    await onSaveHome(null);
+                    setHome(null);
+                    setHomeBusy(false);
+                  }}
+                >
+                  entfernen
+                </Button>
+              )}
+              <Button
+                disabled={homeBusy || !home}
+                onClick={async () => {
+                  if (!home) return;
+                  setHomeBusy(true);
+                  await onSaveHome(home);
+                  setHomeBusy(false);
+                }}
+              >
+                {homeBusy ? "…" : "speichern"}
+              </Button>
+            </div>
+          </div>
         </div>
 
         <Field label="Verbrauch (l / 100 km)" hint="Gilt für alle neuen Fahrten.">

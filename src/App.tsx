@@ -1,7 +1,7 @@
-import { AlertTriangle, Car, Cog, HandCoins, Plus, Route, TrendingUp } from "lucide-react";
+import { AlertTriangle, Car, Cog, HandCoins, LogOut, Plus, Route, ShieldCheck, TrendingUp } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import type { AppSettings, AppState, Person, Trip } from "./lib/calc.ts";
-import { api, type TripPayload } from "./lib/api.ts";
+import type { AppSettings, AppState, HomePlace, Person, Trip } from "./lib/calc.ts";
+import { ApiError, api, type TripPayload } from "./lib/api.ts";
 import { ageLabel, eur, pricePerLiter } from "./lib/format.ts";
 import { TripDialog } from "./components/TripDialog.tsx";
 import { TripList } from "./components/TripList.tsx";
@@ -9,12 +9,16 @@ import { DebtMatrix } from "./components/DebtMatrix.tsx";
 import { SettingsDialog } from "./components/SettingsDialog.tsx";
 import { ConfirmDialog, type ConfirmState } from "./components/ConfirmDialog.tsx";
 import { FilterMenu } from "./components/FilterMenu.tsx";
+import { AuthScreen } from "./pages/AuthScreen.tsx";
+import { AdminDialog } from "./pages/AdminDialog.tsx";
 import { Button } from "./components/ui.tsx";
 
 type Tab = "fahrten" | "zahlungen";
 
 export default function App() {
   const [state, setState] = useState<AppState | null>(null);
+  const [guestPersons, setGuestPersons] = useState<Person[]>([]);
+  const [authReady, setAuthReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("fahrten");
   const [driverFilter, setDriverFilter] = useState<number | null>(null);
@@ -22,6 +26,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [tripOpen, setTripOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -37,7 +42,19 @@ export default function App() {
       setState(data);
       setLoadError(null);
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "Daten konnten nicht geladen werden");
+      if (err instanceof ApiError && err.status === 401) {
+        setState(null);
+        try {
+          const { persons } = await api.publicPersons();
+          setGuestPersons(persons);
+        } catch {
+          setGuestPersons([]);
+        }
+      } else {
+        setLoadError(err instanceof Error ? err.message : "Daten konnten nicht geladen werden");
+      }
+    } finally {
+      setAuthReady(true);
     }
   }, []);
 
@@ -59,6 +76,14 @@ export default function App() {
     }
   }
 
+  if (!authReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-zinc-500">Lädt…</p>
+      </div>
+    );
+  }
+
   if (loadError && !state) {
     return (
       <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 p-6 text-center">
@@ -72,18 +97,12 @@ export default function App() {
   }
 
   if (!state) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-zinc-500">Lädt…</p>
-      </div>
-    );
+    return <AuthScreen persons={guestPersons} onAuthenticated={(next) => setState(next)} />;
   }
 
-  const { persons, trips, matrix, settings, fuelPrice } = state;
-  const meId = settings.mePersonId;
-  const me = persons.find((person) => person.id === meId) ?? null;
+  const { persons, trips, matrix, settings, fuelPrice, me } = state;
+  const mePersonId = me?.personId ?? null;
 
-  // Namen, die jemals gefahren bzw. mitgefahren sind
   const driverOptions = persons.filter((person) => trips.some((trip) => trip.driverId === person.id));
   const passengerOptions = persons.filter((person) =>
     trips.some((trip) => trip.passengers.some((passenger) => passenger.id === person.id))
@@ -187,6 +206,14 @@ export default function App() {
     }
   }
 
+  async function saveHome(home: HomePlace | null) {
+    const result = await guard(() => api.saveHome(home));
+    if (result) {
+      setState(result.state);
+      notify(home ? "Zuhause-Adresse gespeichert" : "Zuhause-Adresse entfernt");
+    }
+  }
+
   async function refreshPrice() {
     const price = await guard(() => api.refreshPrice());
     if (price) {
@@ -195,25 +222,53 @@ export default function App() {
     }
   }
 
+  async function logout() {
+    await guard(() => api.logout());
+    setState(null);
+    setDriverFilter(null);
+    setPassengerFilter(null);
+    await load();
+  }
+
   return (
     <div className="mx-auto min-h-screen w-full max-w-2xl px-4 pb-16 pt-5">
       <header className="mb-4 flex items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-xl font-semibold text-zinc-50">
             <Car className="h-5 w-5 text-blue-400" />
             MitFahr.io
           </h1>
-          <p className="mt-0.5 text-xs text-zinc-500">
-            Fahrgemeinschaft abrechnen{me ? ` · ${me.name}` : " · ohne Anmeldung"}
+          <p className="mt-0.5 truncate text-xs text-zinc-500">
+            {me ? `${me.firstName} ${me.lastName}${me.isAdmin ? " · Admin" : ""}` : "Fahrgemeinschaft abrechnen"}
           </p>
         </div>
-        <button
-          onClick={() => setSettingsOpen(true)}
-          aria-label="Einstellungen"
-          className="rounded-xl border border-zinc-800 bg-zinc-900 p-2.5 text-zinc-400 hover:border-zinc-700 hover:text-zinc-100"
-        >
-          <Cog className="h-5 w-5" />
-        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {me?.isAdmin && (
+            <button
+              onClick={() => setAdminOpen(true)}
+              aria-label="Admin-Dashboard"
+              title="Admin-Dashboard"
+              className="rounded-xl border border-zinc-800 bg-zinc-900 p-2.5 text-blue-300 hover:border-blue-700 hover:text-blue-200"
+            >
+              <ShieldCheck className="h-5 w-5" />
+            </button>
+          )}
+          <button
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Einstellungen"
+            className="rounded-xl border border-zinc-800 bg-zinc-900 p-2.5 text-zinc-400 hover:border-zinc-700 hover:text-zinc-100"
+          >
+            <Cog className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => void logout()}
+            aria-label="Abmelden"
+            title="Abmelden"
+            className="rounded-xl border border-zinc-800 bg-zinc-900 p-2.5 text-zinc-400 hover:border-zinc-700 hover:text-red-300"
+          >
+            <LogOut className="h-5 w-5" />
+          </button>
+        </div>
       </header>
 
       <button
@@ -290,6 +345,10 @@ export default function App() {
             </Button>
           </div>
 
+          {driverFilter === mePersonId && mePersonId !== null && (
+            <p className="px-1 text-xs text-zinc-500">Zeigt nur deine eigenen Fahrten als Fahrer.</p>
+          )}
+
           {visibleTrips.length === 0 && trips.length > 0 && (driverFilter !== null || passengerFilter !== null) ? (
             <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5 text-sm text-zinc-400">
               Keine Fahrt passt zu diesen Filtern.
@@ -307,6 +366,7 @@ export default function App() {
         persons={persons}
         settings={settings}
         fuelPrice={fuelPrice}
+        me={me}
         busy={busy}
         onClose={() => setTripOpen(false)}
         onSubmit={addTrip}
@@ -317,12 +377,21 @@ export default function App() {
         settings={settings}
         fuelPrice={fuelPrice}
         persons={persons}
+        me={me}
         busy={busy}
         onClose={() => setSettingsOpen(false)}
         onSave={saveSettings}
         onRefresh={refreshPrice}
         onAddPerson={addPerson}
         onDeletePerson={requestDeletePerson}
+        onSaveHome={saveHome}
+      />
+
+      <AdminDialog
+        open={adminOpen}
+        onClose={() => setAdminOpen(false)}
+        notify={notify}
+        onDataChanged={() => void load()}
       />
 
       <ConfirmDialog

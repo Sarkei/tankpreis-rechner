@@ -9,6 +9,34 @@ import { getSettings, saveSettings, type FuelTypeKey } from "./src/lib/server/se
 import { chargePairs, loadPayments, loadState, loadTrips } from "./src/lib/server/state.ts";
 import { buildMatrix, round2 } from "./src/lib/calc.ts";
 import { routeKm, searchPlaces } from "./src/lib/server/geo.ts";
+import {
+  attachUser,
+  clearSessionCookie,
+  readResetToken,
+  requireAdmin,
+  requireAuth,
+  setSessionCookie,
+  signResetToken,
+  signSession,
+  type AuthRequest,
+} from "./src/lib/server/auth.ts";
+import {
+  AuthError,
+  checkPassword,
+  clearResetCode,
+  createResetCode,
+  deleteUser,
+  enqueueMail,
+  findUserByEmail,
+  findUserById,
+  listUsers,
+  markLogin,
+  registerUser,
+  saveHome,
+  setPassword,
+  toMe,
+  verifyResetCode,
+} from "./src/lib/server/users.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3000);
@@ -21,8 +49,8 @@ class HttpError extends Error {
   }
 }
 
-type Handler = (req: Request, res: Response) => Promise<void>;
-const wrap = (fn: Handler) => (req: Request, res: Response, next: NextFunction) => {
+type Handler = (req: AuthRequest, res: Response) => Promise<void>;
+const wrap = (fn: Handler) => (req: AuthRequest, res: Response, next: NextFunction) => {
   fn(req, res).catch(next);
 };
 
@@ -65,6 +93,7 @@ async function startServer() {
 
   const app = express();
   app.use(express.json({ limit: "1mb" }));
+  app.use("/api", attachUser);
 
   // ── Health ────────────────────────────────────────────────────────────────
   app.get(
@@ -75,11 +104,184 @@ async function startServer() {
     })
   );
 
+  // ── Anmeldung ─────────────────────────────────────────────────────────────
+  app.post(
+    "/api/auth/register",
+    wrap(async (req, res) => {
+      const { user } = await registerUser({
+        firstName: req.body?.firstName,
+        lastName: req.body?.lastName,
+        email: req.body?.email,
+        password: req.body?.password,
+        personId: req.body?.personId ?? null,
+      });
+      await markLogin(user.id);
+      setSessionCookie(res, signSession(user));
+      res.status(201).json({ state: await loadState(toMe(user)) });
+    })
+  );
+
+  app.post(
+    "/api/auth/login",
+    wrap(async (req, res) => {
+      const email = String(req.body?.email ?? "").trim().toLowerCase();
+      const password = String(req.body?.password ?? "");
+      const user = await findUserByEmail(email);
+      if (!user || !(await checkPassword(password, user.password_hash))) {
+        throw new HttpError(401, "E-Mail oder Passwort ist falsch");
+      }
+      if (!user.is_active) throw new HttpError(403, "Dieses Konto ist gesperrt");
+      await markLogin(user.id);
+      setSessionCookie(res, signSession(user));
+      res.json({ state: await loadState(toMe(user)) });
+    })
+  );
+
+  app.post(
+    "/api/auth/logout",
+    wrap(async (_req, res) => {
+      clearSessionCookie(res);
+      res.json({ ok: true });
+    })
+  );
+
+  app.get(
+    "/api/auth/me",
+    wrap(async (req: AuthRequest, res) => {
+      res.json({ me: req.user ? toMe(req.user) : null });
+    })
+  );
+
+  // Passwort vergessen: Code erzeugen und in die Mail-Warteschlange legen
+  app.post(
+    "/api/auth/forgot",
+    wrap(async (req, res) => {
+      const email = String(req.body?.email ?? "").trim().toLowerCase();
+      const user = await findUserByEmail(email);
+      if (user && user.is_active) {
+        const code = await createResetCode(user.id);
+        await enqueueMail(
+          user.email,
+          "MitFahr.io – dein Code zum Zurücksetzen",
+          [
+            `Hallo ${user.first_name},`,
+            "",
+            "mit diesem Code kannst du dein Passwort zurücksetzen:",
+            "",
+            `    ${code}`,
+            "",
+            "Der Code gilt 15 Minuten. Wenn du ihn nicht angefordert hast, ignoriere diese Mail.",
+            "",
+            "MitFahr.io",
+          ].join("\n")
+        );
+      }
+      // Immer dieselbe Antwort – verrät nicht, ob es die Adresse gibt
+      res.json({ ok: true });
+    })
+  );
+
+  app.post(
+    "/api/auth/verify-code",
+    wrap(async (req, res) => {
+      const email = String(req.body?.email ?? "").trim().toLowerCase();
+      const code = String(req.body?.code ?? "").trim();
+      if (!/^\d{6}$/.test(code)) throw new HttpError(400, "Bitte den 6-stelligen Code eingeben");
+      const result = await verifyResetCode(email, code);
+      if (!result) throw new HttpError(400, "Code ist falsch oder abgelaufen");
+      res.json({ resetToken: signResetToken(result.userId) });
+    })
+  );
+
+  app.post(
+    "/api/auth/reset-password",
+    wrap(async (req, res) => {
+      const userId = readResetToken(req.body?.resetToken);
+      if (!userId) throw new HttpError(400, "Der Vorgang ist abgelaufen – bitte neu anfordern");
+      await setPassword(userId, req.body?.password);
+      await clearResetCode(userId);
+      const user = await findUserById(userId);
+      if (user) {
+        await markLogin(user.id);
+        setSessionCookie(res, signSession(user));
+      }
+      res.json({ state: user ? await loadState(toMe(user)) : null });
+    })
+  );
+
+  // Öffentlich: Namensliste für die Registrierung ("ich bin schon in der Liste")
+  app.get(
+    "/api/public/persons",
+    wrap(async (_req, res) => {
+      const { rows } = await pool.query<{ id: number; name: string }>(
+        `SELECT p.id, p.name FROM persons p
+         LEFT JOIN users u ON u.person_id = p.id
+         WHERE u.id IS NULL
+         ORDER BY p.name ASC`
+      );
+      res.json({ persons: rows.map((row) => ({ id: Number(row.id), name: row.name })) });
+    })
+  );
+
+  // Ab hier ist alles geschützt
+  app.use("/api", requireAuth);
+
+  // ── Eigenes Konto ─────────────────────────────────────────────────────────
+  app.put(
+    "/api/me/home",
+    wrap(async (req: AuthRequest, res) => {
+      const home = req.body?.home;
+      if (home === null) {
+        await saveHome(req.user!.id, null);
+      } else {
+        const lat = Number(home?.lat);
+        const lon = Number(home?.lon);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) throw new HttpError(400, "Koordinaten fehlen");
+        await saveHome(req.user!.id, { label: String(home?.label ?? ""), lat, lon });
+      }
+      const user = await findUserById(req.user!.id);
+      res.json({ state: await loadState(user ? toMe(user) : null) });
+    })
+  );
+
+  // ── Admin ─────────────────────────────────────────────────────────────────
+  app.get(
+    "/api/admin/users",
+    requireAdmin,
+    wrap(async (_req, res) => {
+      res.json({ users: await listUsers() });
+    })
+  );
+
+  app.post(
+    "/api/admin/users/:id/password",
+    requireAdmin,
+    wrap(async (req, res) => {
+      const id = Number(req.params.id);
+      if (!Number.isInteger(id)) throw new HttpError(400, "Ungültige ID");
+      const user = await findUserById(id);
+      if (!user) throw new HttpError(404, "Konto nicht gefunden");
+      await setPassword(id, req.body?.password);
+      res.json({ ok: true, email: user.email });
+    })
+  );
+
+  app.delete(
+    "/api/admin/users/:id",
+    requireAdmin,
+    wrap(async (req, res) => {
+      const id = Number(req.params.id);
+      if (!Number.isInteger(id)) throw new HttpError(400, "Ungültige ID");
+      const result = await deleteUser(id);
+      res.json({ ok: true, personKept: result.personKept });
+    })
+  );
+
   // ── Kompletter Zustand ────────────────────────────────────────────────────
   app.get(
     "/api/state",
-    wrap(async (_req, res) => {
-      res.json(await loadState());
+    wrap(async (req: AuthRequest, res) => {
+      res.json(await loadState(req.user ? toMe(req.user) : null));
     })
   );
 
@@ -92,7 +294,7 @@ async function startServer() {
         `INSERT INTO persons (name) VALUES ($1) RETURNING id, name`,
         [name]
       );
-      res.status(201).json({ person: { id: Number(rows[0].id), name: rows[0].name }, state: await loadState() });
+      res.status(201).json({ person: { id: Number(rows[0].id), name: rows[0].name }, state: await loadState(req.user ? toMe(req.user) : null) });
     })
   );
 
@@ -104,7 +306,7 @@ async function startServer() {
       const name = asName(req.body?.name);
       await assertPersonExists(id);
       await pool.query(`UPDATE persons SET name = $1 WHERE id = $2`, [name, id]);
-      res.json({ state: await loadState() });
+      res.json({ state: await loadState(req.user ? toMe(req.user) : null) });
     })
   );
 
@@ -127,7 +329,7 @@ async function startServer() {
         throw new HttpError(409, "Person kommt in Fahrten oder Zahlungen vor und kann nicht gelöscht werden");
       }
       await pool.query(`DELETE FROM persons WHERE id = $1`, [id]);
-      res.json({ state: await loadState() });
+      res.json({ state: await loadState(req.user ? toMe(req.user) : null) });
     })
   );
 
@@ -208,7 +410,7 @@ async function startServer() {
         client.release();
       }
 
-      res.status(201).json({ state: await loadState() });
+      res.status(201).json({ state: await loadState(req.user ? toMe(req.user) : null) });
     })
   );
 
@@ -219,7 +421,7 @@ async function startServer() {
       if (!id) throw new HttpError(400, "Ungültige ID");
       const deleted = await pool.query(`DELETE FROM trips WHERE id = $1`, [id]);
       if (deleted.rowCount === 0) throw new HttpError(404, "Fahrt nicht gefunden");
-      res.json({ state: await loadState() });
+      res.json({ state: await loadState(req.user ? toMe(req.user) : null) });
     })
   );
 
@@ -267,7 +469,7 @@ async function startServer() {
       }
 
       const total = round2(settled.reduce((sum, e) => sum + e.amount, 0));
-      res.json({ settled, total, state: await loadState() });
+      res.json({ settled, total, state: await loadState(req.user ? toMe(req.user) : null) });
     })
   );
 
@@ -327,18 +529,12 @@ async function startServer() {
             req.body?.manualPrice === undefined || req.body?.manualPrice === null
               ? undefined
               : Number(req.body.manualPrice),
-          mePersonId:
-            req.body?.mePersonId === undefined
-              ? undefined
-              : req.body.mePersonId === null
-                ? null
-                : Number(req.body.mePersonId),
         });
       } catch (err) {
         throw new HttpError(400, err instanceof Error ? err.message : "Einstellungen ungültig");
       }
       const fuelPrice = await getFuelPrice(true);
-      res.json({ settings: await getSettings(), fuelPrice, state: await loadState() });
+      res.json({ settings: await getSettings(), fuelPrice, state: await loadState(req.user ? toMe(req.user) : null) });
     })
   );
 
@@ -352,6 +548,10 @@ async function startServer() {
   // ── Fehlerbehandlung ──────────────────────────────────────────────────────
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof HttpError) {
+      res.status(err.status).json({ error: err.message });
+      return;
+    }
+    if (err instanceof AuthError) {
       res.status(err.status).json({ error: err.message });
       return;
     }

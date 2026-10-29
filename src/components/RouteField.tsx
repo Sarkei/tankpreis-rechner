@@ -22,8 +22,9 @@ export function RouteField({
   const timer = useRef<number | null>(null);
   const box = useRef<HTMLDivElement>(null);
 
+  // auch extern gesetzte Orte (z. B. "Zuhause") ins Feld übernehmen
   useEffect(() => {
-    if (value === null) setText("");
+    setText(value ? value.label : "");
   }, [value]);
 
   useEffect(() => {

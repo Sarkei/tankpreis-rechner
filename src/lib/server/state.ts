@@ -1,15 +1,16 @@
 import { pool } from "./db.ts";
-import { buildMatrix, sharePerPerson, tripCost, type Matrix, type Person, type Trip } from "../calc.ts";
-import { getFuelPrice, type FuelPriceState } from "./fuelPrice.ts";
-import { getSettings, type AppSettings } from "./settings.ts";
-
-export interface AppState {
-  persons: Person[];
-  trips: Trip[];
-  matrix: Matrix;
-  settings: AppSettings;
-  fuelPrice: FuelPriceState;
-}
+import {
+  buildMatrix,
+  sharePerPerson,
+  tripCost,
+  type AppState,
+  type MeUser,
+  type Matrix,
+  type Person,
+  type Trip,
+} from "../calc.ts";
+import { getFuelPrice } from "./fuelPrice.ts";
+import { getSettings } from "./settings.ts";
 
 export async function loadPersons(): Promise<Person[]> {
   const { rows } = await pool.query<{ id: number; name: string }>(`SELECT id, name FROM persons ORDER BY name ASC`);
@@ -109,7 +110,7 @@ export function chargePairs(trips: Trip[]): { creditorId: number; debtorId: numb
   return [...map.values()];
 }
 
-export async function loadState(): Promise<AppState> {
+export async function loadState(me: MeUser | null = null): Promise<AppState> {
   const [persons, trips, paid, settings, fuelPrice] = await Promise.all([
     loadPersons(),
     loadTrips(),
@@ -124,5 +125,6 @@ export async function loadState(): Promise<AppState> {
     matrix: buildMatrix(persons, trips, chargePairs(trips), paid),
     settings,
     fuelPrice,
+    me,
   };
 }

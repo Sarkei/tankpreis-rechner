@@ -1,10 +1,11 @@
-import { Check, Fuel, Route, Save } from "lucide-react";
+import { Check, Fuel, Home, Route, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   sharePerPerson,
   tripCost,
   type AppSettings,
   type FuelPriceState,
+  type MeUser,
   type Person,
 } from "../lib/calc.ts";
 import { eur, kmLabel, pricePerLiter, todayIso } from "../lib/format.ts";
@@ -20,6 +21,7 @@ export function TripDialog({
   persons,
   settings,
   fuelPrice,
+  me,
   busy,
   onClose,
   onSubmit,
@@ -28,6 +30,7 @@ export function TripDialog({
   persons: Person[];
   settings: AppSettings;
   fuelPrice: FuelPriceState;
+  me: MeUser | null;
   busy: boolean;
   onClose: () => void;
   onSubmit: (payload: TripPayload) => Promise<boolean>;
@@ -45,7 +48,7 @@ export function TripDialog({
   const [routeState, setRouteState] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [routeError, setRouteError] = useState<string | null>(null);
 
-  const meId = settings.mePersonId;
+  const meId = me?.personId ?? null;
   const price = fuelPrice.price;
 
   // Beim Öffnen sinnvoll vorbelegen: ich als Fahrer
@@ -194,13 +197,35 @@ export function TripDialog({
               <Route className="h-3.5 w-3.5" />
               Strecke
             </div>
-            <RouteField label="Von" value={from} onChange={setFrom} placeholder="z. B. Bahnhof Traunstein" />
-            <RouteField
-              label="Nach"
-              value={to}
-              onChange={setTo}
-              placeholder="z. B. Berufsschule 1 Traunstein"
-            />
+            <div className="space-y-1">
+              <RouteField label="Von" value={from} onChange={setFrom} placeholder="z. B. Bahnhof Traunstein" />
+              {me?.home && (
+                <button
+                  type="button"
+                  onClick={() => setFrom({ ...me.home! })}
+                  className="inline-flex items-center gap-1 rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700"
+                >
+                  <Home className="h-3 w-3" /> Zuhause übernehmen
+                </button>
+              )}
+            </div>
+            <div className="space-y-1">
+              <RouteField
+                label="Nach"
+                value={to}
+                onChange={setTo}
+                placeholder="z. B. Berufsschule 1 Traunstein"
+              />
+              {me?.home && (
+                <button
+                  type="button"
+                  onClick={() => setTo({ ...me.home! })}
+                  className="inline-flex items-center gap-1 rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700"
+                >
+                  <Home className="h-3 w-3" /> Zuhause als Ziel
+                </button>
+              )}
+            </div>
             {routeState === "loading" && <p className="text-xs text-zinc-400">Strecke wird berechnet…</p>}
             {routeState === "done" && (
               <p className="text-xs text-emerald-400">
