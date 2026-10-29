@@ -1,6 +1,6 @@
-import { Plus, RefreshCw, UserRound, X } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { AppSettings, FuelPriceState, HomePlace, MeUser, Person } from "../lib/calc.ts";
+import type { AppSettings, FuelPriceState, HomePlace, MeUser } from "../lib/calc.ts";
 import { RouteField } from "./RouteField.tsx";
 import { ageLabel, pricePerLiter } from "../lib/format.ts";
 import { Button, Field, Modal, Segmented } from "./ui.tsx";
@@ -15,26 +15,20 @@ export function SettingsDialog({
   open,
   settings,
   fuelPrice,
-  persons,
   me,
   busy,
   onClose,
   onSave,
   onRefresh,
-  onAddPerson,
-  onDeletePerson,
   onSaveHome,
 }: {
   open: boolean;
   settings: AppSettings;
   fuelPrice: FuelPriceState;
-  persons: Person[];
   busy: boolean;
   onClose: () => void;
   onSave: (patch: Partial<AppSettings>) => Promise<void>;
   onRefresh: () => Promise<void>;
-  onAddPerson: (name: string) => Promise<void>;
-  onDeletePerson: (person: Person) => void;
   me: MeUser | null;
   onSaveHome: (home: HomePlace | null) => Promise<void>;
 }) {
@@ -43,7 +37,6 @@ export function SettingsDialog({
   const [fuelType, setFuelType] = useState(settings.fuelType);
   const [priceMode, setPriceMode] = useState(settings.priceMode);
   const [manualPrice, setManualPrice] = useState(settings.manualPrice ? String(settings.manualPrice) : "");
-  const [newPerson, setNewPerson] = useState("");
   const [home, setHome] = useState<HomePlace | null>(me?.home ?? null);
   const [homeBusy, setHomeBusy] = useState(false);
 
@@ -54,7 +47,6 @@ export function SettingsDialog({
     setFuelType(settings.fuelType);
     setPriceMode(settings.priceMode);
     setManualPrice(settings.manualPrice ? String(settings.manualPrice) : "");
-    setNewPerson("");
     setHome(me?.home ?? null);
   }, [open, settings]);
 
@@ -167,61 +159,6 @@ export function SettingsDialog({
             </Field>
           </>
         )}
-
-        <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950 p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Personen</span>
-            <span className="text-xs text-zinc-600">{persons.length}</span>
-          </div>
-
-          {persons.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {persons.map((person) => (
-                <span
-                  key={person.id}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-800 py-1 pl-2.5 pr-1.5 text-sm text-zinc-200"
-                >
-                  <UserRound className="h-3.5 w-3.5 text-zinc-500" />
-                  {person.name}
-                  <button
-                    type="button"
-                    onClick={() => onDeletePerson(person)}
-                    aria-label={`${person.name} entfernen`}
-                    className="rounded-full p-1 text-zinc-500 hover:bg-zinc-700 hover:text-red-400"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-zinc-500">Noch niemand angelegt.</p>
-          )}
-
-          <form
-            onSubmit={async (event) => {
-              event.preventDefault();
-              const name = newPerson.trim();
-              if (name.length < 2) return;
-              await onAddPerson(name);
-              setNewPerson("");
-            }}
-            className="flex gap-2"
-          >
-            <input
-              value={newPerson}
-              onChange={(event) => setNewPerson(event.target.value)}
-              placeholder="Name, z. B. Lia"
-              maxLength={60}
-              className="min-w-0 flex-1"
-            />
-            <Button type="submit" disabled={busy || newPerson.trim().length < 2} className="shrink-0">
-              <Plus className="h-4 w-4" />
-              Hinzufügen
-            </Button>
-          </form>
-
-        </div>
 
         <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950 p-3">
           <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Meine Zuhause-Adresse</span>

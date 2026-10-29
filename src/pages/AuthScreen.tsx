@@ -1,10 +1,43 @@
-import { ArrowLeft, Car, KeyRound, LogIn, Mail, ShieldCheck, UserPlus } from "lucide-react";
+import { ArrowLeft, Car, Check, KeyRound, LogIn, Mail, ShieldCheck, UserPlus, X } from "lucide-react";
 import { useState } from "react";
 import type { AppState, Person } from "../lib/calc.ts";
 import { api } from "../lib/api.ts";
 import { Button, Field } from "../components/ui.tsx";
 
 type Mode = "login" | "register" | "forgot";
+
+const BORDER_OK = "border-emerald-500 focus:border-emerald-500 ring-1 ring-emerald-500/30";
+const BORDER_BAD = "border-red-500 focus:border-red-500 ring-1 ring-red-500/30";
+
+/** Muss zu `passwordProblems` im Server passen. */
+function passwordProblems(password: string): string[] {
+  const problems: string[] = [];
+  if (password.length < 8) problems.push("mindestens 8 Zeichen");
+  if (!/[A-ZÄÖÜ]/.test(password)) problems.push("einen Großbuchstaben");
+  if (!/[0-9]/.test(password)) problems.push("eine Zahl");
+  if (!/[^A-Za-z0-9ÄÖÜäöüß]/.test(password)) problems.push("ein Sonderzeichen");
+  return problems;
+}
+
+function PasswordRules({ password }: { password: string }) {
+  if (password.length === 0) return null;
+  const checks = [
+    { ok: password.length >= 8, label: "mindestens 8 Zeichen" },
+    { ok: /[A-ZÄÖÜ]/.test(password), label: "Großbuchstabe" },
+    { ok: /[0-9]/.test(password), label: "Zahl" },
+    { ok: /[^A-Za-z0-9ÄÖÜäöüß]/.test(password), label: "Sonderzeichen" },
+  ];
+  return (
+    <ul className="space-y-1 text-xs">
+      {checks.map((check) => (
+        <li key={check.label} className={check.ok ? "text-emerald-400" : "text-zinc-500"}>
+          {check.ok ? <Check className="mr-1 inline h-3 w-3" /> : <X className="mr-1 inline h-3 w-3" />}
+          {check.label}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export function AuthScreen({
   persons,
@@ -29,6 +62,7 @@ export function AuthScreen({
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
   const [personId, setPersonId] = useState<string>("");
 
   // Passwort vergessen
@@ -37,6 +71,20 @@ export function AuthScreen({
   const [code, setCode] = useState("");
   const [resetToken, setResetToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [newPassword2, setNewPassword2] = useState("");
+
+  const registerProblems = passwordProblems(password);
+  const registerMatch = password2.length > 0 && password === password2;
+  const registerReady =
+    firstName.trim().length >= 2 &&
+    lastName.trim().length >= 2 &&
+    /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email.trim()) &&
+    registerProblems.length === 0 &&
+    registerMatch;
+
+  const resetProblems = passwordProblems(newPassword);
+  const resetMatch = newPassword2.length > 0 && newPassword === newPassword2;
+  const resetReady = resetProblems.length === 0 && resetMatch;
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -123,6 +171,7 @@ export function AuthScreen({
             className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
+              if (!registerReady) return;
               void run(async () => {
                 const { state } = await api.register({
                   firstName,
@@ -157,16 +206,43 @@ export function AuthScreen({
                 required
               />
             </Field>
-            <Field label="Passwort" hint="Mindestens 8 Zeichen.">
+
+            <div className="space-y-2">
+              <Field label="Passwort">
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="z. B. Mitfahr2026!"
+                  className={
+                    password.length === 0
+                      ? undefined
+                      : registerProblems.length === 0
+                        ? BORDER_OK
+                        : BORDER_BAD
+                  }
+                  required
+                />
+              </Field>
+              <PasswordRules password={password} />
+            </div>
+
+            <Field label="Passwort wiederholen">
               <input
                 type="password"
                 autoComplete="new-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                minLength={8}
+                value={password2}
+                onChange={(event) => setPassword2(event.target.value)}
+                placeholder="nochmal eingeben"
+                className={password2.length === 0 ? undefined : registerMatch ? BORDER_OK : BORDER_BAD}
                 required
               />
             </Field>
+            {password2.length > 0 && !registerMatch && (
+              <p className="text-xs text-red-400">Die Passwörter stimmen nicht überein.</p>
+            )}
+
             {persons.length > 0 && (
               <Field label="Schon in der Liste?" hint="Damit deine bisherigen Fahrten zu dir gehören.">
                 <select value={personId} onChange={(event) => setPersonId(event.target.value)}>
@@ -180,9 +256,14 @@ export function AuthScreen({
               </Field>
             )}
             {error && <p className="text-sm text-red-400">{error}</p>}
-            <Button type="submit" className="w-full" disabled={busy}>
+            <Button type="submit" className="w-full" disabled={busy || !registerReady}>
               {busy ? "Anlegen…" : "Konto anlegen"}
             </Button>
+            {!registerReady && (
+              <p className="text-center text-xs text-zinc-500">
+                Bitte alle Felder ausfüllen, Passwortregeln erfüllen und beide Passwörter angleichen.
+              </p>
+            )}
             <button
               type="button"
               onClick={() => switchMode("login")}
@@ -277,6 +358,7 @@ export function AuthScreen({
                 className="space-y-4"
                 onSubmit={(event) => {
                   event.preventDefault();
+                  if (!resetReady) return;
                   void run(async () => {
                     const { state } = await api.resetPassword(resetToken, newPassword);
                     if (state) onAuthenticated(state);
@@ -287,18 +369,38 @@ export function AuthScreen({
                 <p className="flex items-center gap-1.5 text-xs text-emerald-400">
                   <ShieldCheck className="h-3.5 w-3.5" /> Code bestätigt – jetzt neues Passwort setzen
                 </p>
-                <Field label="Neues Passwort" hint="Mindestens 8 Zeichen.">
+                <Field label="Neues Passwort">
                   <input
                     type="password"
                     autoComplete="new-password"
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
-                    minLength={8}
+                    className={
+                      newPassword.length === 0
+                        ? undefined
+                        : resetProblems.length === 0
+                          ? BORDER_OK
+                          : BORDER_BAD
+                    }
                     required
                   />
                 </Field>
+                <PasswordRules password={newPassword} />
+                <Field label="Passwort wiederholen">
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    value={newPassword2}
+                    onChange={(event) => setNewPassword2(event.target.value)}
+                    className={newPassword2.length === 0 ? undefined : resetMatch ? BORDER_OK : BORDER_BAD}
+                    required
+                  />
+                </Field>
+                {newPassword2.length > 0 && !resetMatch && (
+                  <p className="text-xs text-red-400">Die Passwörter stimmen nicht überein.</p>
+                )}
                 {error && <p className="text-sm text-red-400">{error}</p>}
-                <Button type="submit" className="w-full" disabled={busy}>
+                <Button type="submit" className="w-full" disabled={busy || !resetReady}>
                   {busy ? "Speichere…" : "Passwort speichern"}
                 </Button>
               </form>

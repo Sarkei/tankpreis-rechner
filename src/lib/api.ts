@@ -48,10 +48,6 @@ export interface TripPayload {
 export const api = {
   state: () => request<AppState>("/api/state"),
 
-  addPerson: (name: string) => request<{ state: AppState }>("/api/persons", { method: "POST", body: { name } }),
-
-  deletePerson: (id: number) => request<{ state: AppState }>(`/api/persons/${id}`, { method: "DELETE" }),
-
   addTrip: (payload: TripPayload) => request<{ state: AppState }>("/api/trips", { method: "POST", body: payload }),
 
   deleteTrip: (id: number) => request<{ state: AppState }>(`/api/trips/${id}`, { method: "DELETE" }),

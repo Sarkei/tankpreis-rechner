@@ -285,54 +285,6 @@ async function startServer() {
     })
   );
 
-  // ── Personen ──────────────────────────────────────────────────────────────
-  app.post(
-    "/api/persons",
-    wrap(async (req, res) => {
-      const name = asName(req.body?.name);
-      const { rows } = await pool.query<{ id: number; name: string }>(
-        `INSERT INTO persons (name) VALUES ($1) RETURNING id, name`,
-        [name]
-      );
-      res.status(201).json({ person: { id: Number(rows[0].id), name: rows[0].name }, state: await loadState(req.user ? toMe(req.user) : null) });
-    })
-  );
-
-  app.patch(
-    "/api/persons/:id",
-    wrap(async (req, res) => {
-      const id = asId(req.params.id);
-      if (!id) throw new HttpError(400, "Ungültige ID");
-      const name = asName(req.body?.name);
-      await assertPersonExists(id);
-      await pool.query(`UPDATE persons SET name = $1 WHERE id = $2`, [name, id]);
-      res.json({ state: await loadState(req.user ? toMe(req.user) : null) });
-    })
-  );
-
-  app.delete(
-    "/api/persons/:id",
-    wrap(async (req, res) => {
-      const id = asId(req.params.id);
-      if (!id) throw new HttpError(400, "Ungültige ID");
-      await assertPersonExists(id);
-
-      const used = await pool.query<{ n: string }>(
-        `SELECT (
-           (SELECT COUNT(*) FROM trips WHERE driver_id = $1) +
-           (SELECT COUNT(*) FROM trip_passengers WHERE person_id = $1) +
-           (SELECT COUNT(*) FROM payments WHERE debtor_id = $1 OR creditor_id = $1)
-         )::text AS n`,
-        [id]
-      );
-      if (Number(used.rows[0].n) > 0) {
-        throw new HttpError(409, "Person kommt in Fahrten oder Zahlungen vor und kann nicht gelöscht werden");
-      }
-      await pool.query(`DELETE FROM persons WHERE id = $1`, [id]);
-      res.json({ state: await loadState(req.user ? toMe(req.user) : null) });
-    })
-  );
-
   // ── Fahrten ───────────────────────────────────────────────────────────────
   app.post(
     "/api/trips",
