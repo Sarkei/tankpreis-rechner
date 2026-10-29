@@ -220,6 +220,38 @@ async function searchNominatim(query: string): Promise<Place[]> {
     .filter((place) => place.label.length > 0 && Number.isFinite(place.lat) && Number.isFinite(place.lon));
 }
 
+
+const ROMAN: Record<string, string> = { "1": "I", "2": "II", "3": "III" };
+const ARABIC: Record<string, string> = { I: "1", II: "2", III: "3" };
+
+/**
+ * Suchvarianten: OSM führt Schulen als "Berufsschule I", getippt wird aber
+ * "Berufsschule 1". Deshalb zusätzlich die Schreibweise mit getauschten
+ * Ziffern abfragen (römisch <-> arabisch).
+ */
+function queryVariants(query: string): string[] {
+  const variants = [query];
+  const toRoman = query.replace(/\b([123])\b/g, (match) => ROMAN[match] ?? match);
+  if (toRoman !== query) variants.push(toRoman);
+  const toArabic = query.replace(/\b(III|II|I)\b/g, (match) => ARABIC[match] ?? match);
+  if (toArabic !== query && !variants.includes(toArabic)) variants.push(toArabic);
+  return variants.slice(0, 2);
+}
+
+function mergeUnique(groups: Place[][]): Place[] {
+  const seen = new Set<string>();
+  const merged: Place[] = [];
+  for (const group of groups) {
+    for (const place of group) {
+      const key = `${place.lat.toFixed(4)}|${place.lon.toFixed(4)}|${place.label.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(place);
+    }
+  }
+  return merged.slice(0, 10);
+}
+
 export async function searchPlaces(query: string, plz?: string): Promise<Place[]> {
   const q = query.trim();
   if (q.length < 3) return [];
@@ -231,12 +263,11 @@ export async function searchPlaces(query: string, plz?: string): Promise<Place[]
   const bias = plz && /^\d{5}$/.test(plz) ? await plzCoords(plz) : null;
 
   await throttle();
-  let results: Place[] = [];
-  try {
-    results = await searchPhoton(q, bias);
-  } catch {
-    results = [];
-  }
+  const variants = queryVariants(q);
+  const groups = await Promise.all(
+    variants.map((variant) => searchPhoton(variant, bias).catch(() => [] as Place[]))
+  );
+  let results = mergeUnique(groups);
 
   if (results.length === 0) {
     await throttle();
