@@ -253,7 +253,15 @@ function mergeUnique(groups: Place[][]): Place[] {
 }
 
 
-const LOW_VALUE_CATEGORIES = new Set(["Baustelle", "Wohngebiet", "Gewerbe"]);
+// Haltestellen und Bahnsteige liegen oft am Ziel, sind aber nicht das Ziel.
+const LOW_VALUE_CATEGORIES = new Set([
+  "Baustelle",
+  "Wohngebiet",
+  "Gewerbe",
+  "Haltestelle",
+  "Bahnsteig",
+  "Bahnhalt",
+]);
 
 function normalizeText(text: string): string {
   return text
