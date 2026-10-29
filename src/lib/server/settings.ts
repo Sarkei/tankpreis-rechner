@@ -18,7 +18,7 @@ export const FUEL_TYPE_LABELS: Record<FuelTypeKey, string> = {
 };
 
 export async function getSettings(): Promise<AppSettings> {
-  const { rows } = await pool.query<{ key: string; value: string }>(`SELECT key, value FROM mf_settings`);
+  const { rows } = await pool.query<{ key: string; value: string }>(`SELECT key, value FROM settings`);
   const map = new Map(rows.map((r) => [r.key, r.value]));
   const fuelType = map.get("fuel_type");
   const priceMode = map.get("price_mode");
@@ -62,7 +62,7 @@ export async function saveSettings(patch: Partial<AppSettings>): Promise<AppSett
 
   for (const [key, value] of entries) {
     await pool.query(
-      `INSERT INTO mf_settings (key, value) VALUES ($1, $2)
+      `INSERT INTO settings (key, value) VALUES ($1, $2)
        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
       [key, value]
     );
