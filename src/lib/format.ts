@@ -50,6 +50,21 @@ export function ageLabel(iso: string | null): string {
   return `vor ${days} ${days === 1 ? "Tag" : "Tagen"}`;
 }
 
+/** Kürzt einen Nominatim-Namen auf die wesentlichen Teile: "Name, Straße". */
+export function shortPlaceLabel(full: string): string {
+  const parts = full
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter(
+      (part) =>
+        !/^\d{5}$/.test(part) &&
+        !/^(deutschland|bayern|landkreis|gemarkung|regierungsbezirk|oberbayern)$/i.test(part) &&
+        !/^(landkreis|gemarkung|regierungsbezirk)\b/i.test(part)
+    );
+  return parts.slice(0, 2).join(", ") || full;
+}
+
 export function todayIso(): string {
   const now = new Date();
   const offset = now.getTimezoneOffset();

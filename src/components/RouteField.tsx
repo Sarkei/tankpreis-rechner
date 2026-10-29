@@ -1,6 +1,7 @@
 import { MapPin, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api, type Place } from "../lib/api.ts";
+import { shortPlaceLabel } from "../lib/format.ts";
 
 export function RouteField({
   label,
@@ -95,8 +96,9 @@ export function RouteField({
               <button
                 type="button"
                 onClick={() => {
-                  onChange(place);
-                  setText(place.label);
+                  const short = { ...place, label: shortPlaceLabel(place.label) };
+                  onChange(short);
+                  setText(short.label);
                   setOpen(false);
                   setResults([]);
                 }}
