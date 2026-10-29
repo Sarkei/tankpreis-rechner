@@ -102,9 +102,14 @@ export function RouteField({
                   setOpen(false);
                   setResults([]);
                 }}
-                className="block w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+                className="flex w-full items-start gap-2 px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
               >
-                {place.label}
+                <span className="flex-1">{shortPlaceLabel(place.label)}</span>
+                {place.category && (
+                  <span className="mt-0.5 shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-zinc-400">
+                    {place.category}
+                  </span>
+                )}
               </button>
             </li>
           ))}

@@ -29,6 +29,8 @@ export interface Place {
   label: string;
   lat: number;
   lon: number;
+  /** Art des Treffers, z. B. "Schule" oder "Bahnhof" */
+  category?: string | null;
 }
 
 export interface TripPayload {
