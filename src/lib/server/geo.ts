@@ -252,6 +252,54 @@ function mergeUnique(groups: Place[][]): Place[] {
   return merged.slice(0, 10);
 }
 
+
+const LOW_VALUE_CATEGORIES = new Set(["Baustelle", "Wohngebiet", "Gewerbe"]);
+
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/ä/g, "a")
+    .replace(/ö/g, "o")
+    .replace(/ü/g, "u")
+    .replace(/ß/g, "ss")
+    .replace(/\b(iii|ii|i)\b/g, (match) => String({ iii: 3, ii: 2, i: 1 }[match as "i" | "ii" | "iii"]))
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function distanceScore(place: Place, bias: { lat: number; lon: number } | null): number {
+  if (!bias) return 0;
+  const dLat = place.lat - bias.lat;
+  const dLon = place.lon - bias.lon;
+  return Math.sqrt(dLat * dLat + dLon * dLon);
+}
+
+/** Treffer neu ordnen: Worttreffer zählen, Baustellen/Flächen nach hinten, Nähe zur PLZ danach. */
+function rankPlaces(places: Place[], query: string, bias: { lat: number; lon: number } | null): Place[] {
+  const tokens = normalizeText(query)
+    .split(" ")
+    .filter((token) => token.length > 1 || /^\d+$/.test(token));
+  return places
+    .map((place) => {
+      const namePart = normalizeText(place.label.split(",")[0]);
+      const nameWords = namePart.split(" ");
+      const haystack = normalizeText(`${place.label} ${place.category ?? ""}`);
+      const hits = tokens.reduce((sum, token) => {
+        // Ziffern (1, 2, 3 nach Umwandlung) zählen nur im Namen, nicht in der Hausnummer
+        if (/^\d+$/.test(token)) return sum + (nameWords.includes(token) ? 2 : 0);
+        return sum + (haystack.includes(token) ? 1 : 0);
+      }, 0);
+      const low = LOW_VALUE_CATEGORIES.has(place.category ?? "") ? -2 : 0;
+      return { place, score: hits + low };
+    })
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return distanceScore(a.place, bias) - distanceScore(b.place, bias);
+    })
+    .map((entry) => entry.place);
+}
+
 export async function searchPlaces(query: string, plz?: string): Promise<Place[]> {
   const q = query.trim();
   if (q.length < 3) return [];
@@ -267,7 +315,7 @@ export async function searchPlaces(query: string, plz?: string): Promise<Place[]
   const groups = await Promise.all(
     variants.map((variant) => searchPhoton(variant, bias).catch(() => [] as Place[]))
   );
-  let results = mergeUnique(groups);
+  let results = rankPlaces(mergeUnique(groups), q, bias);
 
   if (results.length === 0) {
     await throttle();
