@@ -281,7 +281,8 @@ async function startServer() {
         return;
       }
       try {
-        res.json({ results: await searchPlaces(q) });
+        const { plz } = await getSettings();
+        res.json({ results: await searchPlaces(q, plz) });
       } catch (err) {
         throw new HttpError(503, err instanceof Error ? err.message : "Ortssuche nicht erreichbar");
       }
