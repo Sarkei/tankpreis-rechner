@@ -1,76 +1,287 @@
-import React, { Suspense, lazy } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "./lib/AuthContext.tsx";
-import Shell from "./components/layout/Shell.tsx";
-import { SkeletonCard } from "./components/ui/index.tsx";
+import { AlertTriangle, Car, Cog, HandCoins, Route, TrendingUp } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import type { AppSettings, AppState, Person, Trip } from "./lib/calc.ts";
+import { api, type TripPayload } from "./lib/api.ts";
+import { ageLabel, eur, pricePerLiter } from "./lib/format.ts";
+import { PersonBar } from "./components/PersonBar.tsx";
+import { TripForm } from "./components/TripForm.tsx";
+import { TripList } from "./components/TripList.tsx";
+import { DebtMatrix } from "./components/DebtMatrix.tsx";
+import { SettingsDialog } from "./components/SettingsDialog.tsx";
+import { ConfirmDialog, type ConfirmState } from "./components/ConfirmDialog.tsx";
 
-const LoginPage = lazy(() => import("./pages/LoginPage.tsx"));
-const RegisterPage = lazy(() => import("./pages/RegisterPage.tsx"));
-const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage.tsx"));
-const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage.tsx"));
-const DashboardPage = lazy(() => import("./pages/DashboardPage.tsx"));
-const VehiclesPage = lazy(() => import("./pages/VehiclesPage.tsx"));
-const GroupsPage = lazy(() => import("./pages/GroupsPage.tsx"));
-const GroupDetailPage = lazy(() => import("./pages/GroupDetailPage.tsx"));
-const JoinGroupPage = lazy(() => import("./pages/JoinGroupPage.tsx"));
-const TripsPage = lazy(() => import("./pages/TripsPage.tsx"));
-const PaymentsPage = lazy(() => import("./pages/PaymentsPage.tsx"));
-const StatsPage = lazy(() => import("./pages/StatsPage.tsx"));
-const SettingsPage = lazy(() => import("./pages/SettingsPage.tsx"));
-
-function LoadingFallback() {
-  return (
-    <div className="space-y-4 p-4">
-      <SkeletonCard />
-      <SkeletonCard />
-      <SkeletonCard />
-    </div>
-  );
-}
-
-function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) return <LoadingFallback />;
-  if (!user) return <Navigate to="/login" replace />;
-  return <>{children}</>;
-}
+type Tab = "fahrten" | "zahlungen";
 
 export default function App() {
-  const { user, loading } = useAuth();
+  const [state, setState] = useState<AppState | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>("fahrten");
+  const [busy, setBusy] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
-  if (loading) {
+  const notify = useCallback((message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast((current) => (current === message ? null : current)), 2800);
+  }, []);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await api.state();
+      setState(data);
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Daten konnten nicht geladen werden");
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function guard<T>(action: () => Promise<T>, success?: string): Promise<T | undefined> {
+    setBusy(true);
+    try {
+      const result = await action();
+      if (success) notify(success);
+      return result;
+    } catch (err) {
+      notify(err instanceof Error ? err.message : "Etwas ist schiefgelaufen");
+      return undefined;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (loadError && !state) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-zinc-500 text-sm">Lädt…</p>
-        </div>
+      <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 p-6 text-center">
+        <AlertTriangle className="h-8 w-8 text-amber-400" />
+        <p className="text-sm text-zinc-400">{loadError}</p>
+        <button onClick={() => void load()} className="rounded-xl bg-blue-600 px-4 py-2 text-sm text-white">
+          Erneut laden
+        </button>
       </div>
     );
   }
 
+  if (!state) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-zinc-500">Lädt…</p>
+      </div>
+    );
+  }
+
+  const { persons, trips, matrix, settings, fuelPrice } = state;
+
+  async function addPerson(name: string) {
+    const result = await guard(() => api.addPerson(name));
+    if (result) {
+      setState(result.state);
+      notify(`${name} hinzugefügt`);
+    }
+  }
+
+  function requestDeletePerson(person: Person) {
+    setConfirm({
+      title: "Person entfernen?",
+      message: `${person.name} wird aus der Liste entfernt. Personen mit Fahrten oder Zahlungen lassen sich nicht löschen.`,
+      confirmLabel: "Entfernen",
+      danger: true,
+      onConfirm: async () => {
+        setConfirmBusy(true);
+        const result = await guard(() => api.deletePerson(person.id));
+        if (result) {
+          setState(result.state);
+          notify(`${person.name} entfernt`);
+        }
+        setConfirmBusy(false);
+        setConfirm(null);
+      },
+    });
+  }
+
+  async function addTrip(payload: TripPayload): Promise<boolean> {
+    const result = await guard(() => api.addTrip(payload));
+    if (!result) return false;
+    setState(result.state);
+    notify("Fahrt gespeichert");
+    return true;
+  }
+
+  function requestDeleteTrip(trip: Trip) {
+    setConfirm({
+      title: "Fahrt löschen?",
+      message: `${trip.direction === "HIN" ? "Hinfahrt" : "Rückfahrt"} vom ${trip.date} mit ${trip.driverName} (${trip.km} km) wird gelöscht – die Beträge verschwinden aus der Abrechnung.`,
+      confirmLabel: "Löschen",
+      danger: true,
+      onConfirm: async () => {
+        setConfirmBusy(true);
+        const result = await guard(() => api.deleteTrip(trip.id));
+        if (result) {
+          setState(result.state);
+          notify("Fahrt gelöscht");
+        }
+        setConfirmBusy(false);
+        setConfirm(null);
+      },
+    });
+  }
+
+  function requestSettle(debtorId: number, creditorId: number | null) {
+    const debtor = persons.find((person) => person.id === debtorId);
+    if (!debtor) return;
+    const creditor = creditorId ? persons.find((person) => person.id === creditorId) : null;
+
+    const amount = creditor
+      ? (matrix.cells[`${creditor.id}:${debtor.id}`] ?? 0)
+      : (matrix.colTotals[String(debtor.id)] ?? 0);
+    if (amount <= 0) return;
+
+    setConfirm({
+      title: "Schulden begleichen",
+      message: creditor
+        ? `${debtor.name} hat ${eur(amount)} an ${creditor.name} bezahlt. Wirklich als bezahlt markieren?`
+        : `${debtor.name} begleicht alle offenen Beträge (${eur(amount)}). Wirklich als bezahlt markieren?`,
+      confirmLabel: "Ja, bezahlt",
+      onConfirm: async () => {
+        setConfirmBusy(true);
+        const result = await guard(() => api.settle(debtorId, creditorId ?? undefined));
+        if (result) {
+          setState(result.state);
+          notify(`${debtor.name}: ${eur(result.total)} beglichen`);
+        }
+        setConfirmBusy(false);
+        setConfirm(null);
+      },
+    });
+  }
+
+  async function saveSettings(patch: Partial<AppSettings>) {
+    const result = await guard(() => api.saveSettings(patch));
+    if (result) {
+      setState(result.state);
+      setSettingsOpen(false);
+      notify("Einstellungen gespeichert");
+    }
+  }
+
+  async function refreshPrice() {
+    const price = await guard(() => api.refreshPrice());
+    if (price) {
+      setState((current) => (current ? { ...current, fuelPrice: price } : current));
+      notify(price.price ? `Aktueller Preis: ${pricePerLiter(price.price)}/l` : "Kein Preis gefunden");
+    }
+  }
+
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      <Routes>
-        {/* Public */}
-        <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
-        <Route path="/register" element={user ? <Navigate to="/" replace /> : <RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/join" element={<JoinGroupPage />} />
+    <div className="mx-auto min-h-screen w-full max-w-2xl px-4 pb-16 pt-5">
+      <header className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-semibold text-zinc-50">
+            <Car className="h-5 w-5 text-blue-400" />
+            MitFahr.io
+          </h1>
+          <p className="mt-0.5 text-xs text-zinc-500">Fahrgemeinschaft abrechnen – ohne Anmeldung</p>
+        </div>
+        <button
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Einstellungen"
+          className="rounded-xl border border-zinc-800 bg-zinc-900 p-2.5 text-zinc-400 hover:border-zinc-700 hover:text-zinc-100"
+        >
+          <Cog className="h-5 w-5" />
+        </button>
+      </header>
 
-        {/* Private */}
-        <Route path="/" element={<PrivateRoute><Shell><DashboardPage /></Shell></PrivateRoute>} />
-        <Route path="/vehicles" element={<PrivateRoute><Shell><VehiclesPage /></Shell></PrivateRoute>} />
-        <Route path="/groups" element={<PrivateRoute><Shell><GroupsPage /></Shell></PrivateRoute>} />
-        <Route path="/groups/:id" element={<PrivateRoute><Shell><GroupDetailPage /></Shell></PrivateRoute>} />
-        <Route path="/trips" element={<PrivateRoute><Shell><TripsPage /></Shell></PrivateRoute>} />
-        <Route path="/payments" element={<PrivateRoute><Shell><PaymentsPage /></Shell></PrivateRoute>} />
-        <Route path="/stats" element={<PrivateRoute><Shell><StatsPage /></Shell></PrivateRoute>} />
-        <Route path="/settings" element={<PrivateRoute><Shell><SettingsPage /></Shell></PrivateRoute>} />
+      <button
+        onClick={() => setSettingsOpen(true)}
+        className="mb-4 flex w-full items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-left hover:border-zinc-700"
+      >
+        <div className="flex items-center gap-2 text-sm">
+          <TrendingUp className="h-4 w-4 text-emerald-400" />
+          <span className="font-medium text-zinc-100">
+            {fuelPrice.price ? `${pricePerLiter(fuelPrice.price)}/l` : "kein Tankpreis"}
+          </span>
+          <span className="text-zinc-500">{fuelPrice.fuelLabel}</span>
+        </div>
+        <span className="text-xs text-zinc-500">
+          {fuelPrice.source === "manual"
+            ? "manuell"
+            : fuelPrice.stale
+              ? "veraltet"
+              : ageLabel(fuelPrice.fetchedAt) || "PLZ prüfen"}
+        </span>
+      </button>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
+      <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-zinc-900 p-1">
+        <button
+          onClick={() => setTab("fahrten")}
+          className={
+            "flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors " +
+            (tab === "fahrten" ? "bg-blue-600 text-white" : "text-zinc-400 hover:text-zinc-200")
+          }
+        >
+          <Route className="h-4 w-4" />
+          Fahrten
+          <span className="text-xs opacity-70">{trips.length}</span>
+        </button>
+        <button
+          onClick={() => setTab("zahlungen")}
+          className={
+            "flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors " +
+            (tab === "zahlungen" ? "bg-blue-600 text-white" : "text-zinc-400 hover:text-zinc-200")
+          }
+        >
+          <HandCoins className="h-4 w-4" />
+          Zahlungen
+          {matrix.total > 0 && <span className="text-xs opacity-70">{eur(matrix.total)}</span>}
+        </button>
+      </div>
+
+      {tab === "fahrten" ? (
+        <div className="space-y-4">
+          <PersonBar persons={persons} busy={busy} onAdd={addPerson} onDelete={requestDeletePerson} />
+          <TripForm persons={persons} settings={settings} fuelPrice={fuelPrice} busy={busy} onSubmit={addTrip} />
+          <div>
+            <h2 className="mb-2 px-1 text-sm font-semibold text-zinc-300">Fahrten</h2>
+            <TripList trips={trips} onDelete={requestDeleteTrip} />
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <DebtMatrix matrix={matrix} onSettle={requestSettle} />
+          <PersonBar persons={persons} busy={busy} onAdd={addPerson} onDelete={requestDeletePerson} />
+        </div>
+      )}
+
+      <SettingsDialog
+        open={settingsOpen}
+        settings={settings}
+        fuelPrice={fuelPrice}
+        busy={busy}
+        onClose={() => setSettingsOpen(false)}
+        onSave={saveSettings}
+        onRefresh={refreshPrice}
+      />
+
+      <ConfirmDialog
+        state={confirm}
+        busy={confirmBusy}
+        onClose={() => {
+          if (!confirmBusy) setConfirm(null);
+        }}
+      />
+
+      {toast && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-4">
+          <div className="pointer-events-auto rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 shadow-lg shadow-black/40">
+            {toast}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
