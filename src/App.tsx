@@ -114,33 +114,6 @@ export default function App() {
     return true;
   });
 
-  async function addPerson(name: string) {
-    const result = await guard(() => api.addPerson(name));
-    if (result) {
-      setState(result.state);
-      notify(`${name} hinzugefügt`);
-    }
-  }
-
-  function requestDeletePerson(person: Person) {
-    setConfirm({
-      title: "Person entfernen?",
-      message: `${person.name} wird aus der Liste entfernt. Personen mit Fahrten oder Zahlungen lassen sich nicht löschen.`,
-      confirmLabel: "Entfernen",
-      danger: true,
-      onConfirm: async () => {
-        setConfirmBusy(true);
-        const result = await guard(() => api.deletePerson(person.id));
-        if (result) {
-          setState(result.state);
-          notify(`${person.name} entfernt`);
-        }
-        setConfirmBusy(false);
-        setConfirm(null);
-      },
-    });
-  }
-
   async function addTrip(payload: TripPayload): Promise<boolean> {
     const result = await guard(() => api.addTrip(payload));
     if (!result) return false;
@@ -376,14 +349,11 @@ export default function App() {
         open={settingsOpen}
         settings={settings}
         fuelPrice={fuelPrice}
-        persons={persons}
         me={me}
         busy={busy}
         onClose={() => setSettingsOpen(false)}
         onSave={saveSettings}
         onRefresh={refreshPrice}
-        onAddPerson={addPerson}
-        onDeletePerson={requestDeletePerson}
         onSaveHome={saveHome}
       />
 

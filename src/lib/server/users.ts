@@ -48,10 +48,23 @@ export function normalizeEmail(email: unknown): string {
   return value;
 }
 
+/** Mindestanforderung: 8 Zeichen, Großbuchstabe, Zahl, Sonderzeichen. */
+export function passwordProblems(password: string): string[] {
+  const problems: string[] = [];
+  if (password.length < 8) problems.push("mindestens 8 Zeichen");
+  if (!/[A-ZÄÖÜ]/.test(password)) problems.push("einen Großbuchstaben");
+  if (!/[0-9]/.test(password)) problems.push("eine Zahl");
+  if (!/[^A-Za-z0-9ÄÖÜäöüß]/.test(password)) problems.push("ein Sonderzeichen");
+  return problems;
+}
+
 export function checkPasswordStrength(password: unknown): string {
   const value = String(password ?? "");
-  if (value.length < 8) throw new AuthError(400, "Das Passwort braucht mindestens 8 Zeichen");
   if (value.length > 200) throw new AuthError(400, "Das Passwort ist zu lang");
+  const problems = passwordProblems(value);
+  if (problems.length > 0) {
+    throw new AuthError(400, `Das Passwort braucht ${problems.join(", ")}`);
+  }
   return value;
 }
 
