@@ -92,6 +92,7 @@ export function AdminDialog({
       open={open}
       onClose={onClose}
       title="Admin-Dashboard"
+      size="wide"
       footer={
         <Button variant="secondary" onClick={onClose}>
           Schließen
@@ -136,7 +137,7 @@ export function AdminDialog({
                         Admin
                       </span>
                     )}
-                    {user.personName && (
+                    {user.personName && user.personName !== `${user.firstName} ${user.lastName}` && (
                       <div className="text-[11px] text-zinc-500">Person: {user.personName}</div>
                     )}
                   </td>

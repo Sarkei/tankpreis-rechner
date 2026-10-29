@@ -16,6 +16,7 @@ export function SettingsDialog({
   settings,
   fuelPrice,
   me,
+  canEditGlobal,
   busy,
   onClose,
   onSave,
@@ -30,6 +31,8 @@ export function SettingsDialog({
   onSave: (patch: Partial<AppSettings>) => Promise<void>;
   onRefresh: () => Promise<void>;
   me: MeUser | null;
+  /** Globale Werte (PLZ, Sprit, Verbrauch) darf nur ein Admin ändern. */
+  canEditGlobal: boolean;
   onSaveHome: (home: HomePlace | null) => Promise<void>;
 }) {
   const [plz, setPlz] = useState(settings.plz);
@@ -58,8 +61,9 @@ export function SettingsDialog({
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={busy}>
-            Abbrechen
+            {canEditGlobal ? "Abbrechen" : "Schließen"}
           </Button>
+          {canEditGlobal && (
           <Button
             onClick={() =>
               onSave({
@@ -74,6 +78,7 @@ export function SettingsDialog({
           >
             Speichern
           </Button>
+          )}
         </>
       }
     >
@@ -114,16 +119,28 @@ export function SettingsDialog({
           )}
         </div>
 
-        <Field label="Preisquelle">
-          <Segmented
-            value={priceMode}
-            onChange={setPriceMode}
-            options={[
-              { value: "auto", label: "Automatisch" },
-              { value: "manual", label: "Manuell" },
-            ]}
-          />
-        </Field>
+        {!canEditGlobal && (
+          <p className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-400">
+            Tankpreis, PLZ und Verbrauch gelten für alle und lassen sich nur vom Admin ändern.
+          </p>
+        )}
+
+        {canEditGlobal ? (
+          <Field label="Preisquelle">
+            <Segmented
+              value={priceMode}
+              onChange={setPriceMode}
+              options={[
+                { value: "auto", label: "Automatisch" },
+                { value: "manual", label: "Manuell" },
+              ]}
+            />
+          </Field>
+        ) : (
+          <p className="text-xs text-zinc-500">
+            Preisquelle: <span className="text-zinc-300">{priceMode === "manual" ? "manuell" : "automatisch"}</span>
+          </p>
+        )}
 
         {priceMode === "manual" ? (
           <Field label="Preis pro Liter (€)">
@@ -133,6 +150,7 @@ export function SettingsDialog({
               min="0.1"
               step="0.001"
               value={manualPrice}
+              disabled={!canEditGlobal}
               onChange={(event) => setManualPrice(event.target.value)}
               placeholder="z. B. 1.789"
             />
@@ -144,12 +162,13 @@ export function SettingsDialog({
                 inputMode="numeric"
                 maxLength={5}
                 value={plz}
+                disabled={!canEditGlobal}
                 onChange={(event) => setPlz(event.target.value.replace(/\D/g, "").slice(0, 5))}
                 placeholder="83278"
               />
             </Field>
             <Field label="Kraftstoff">
-              <select value={fuelType} onChange={(event) => setFuelType(event.target.value as AppSettings["fuelType"])}>
+              <select value={fuelType} disabled={!canEditGlobal} onChange={(event) => setFuelType(event.target.value as AppSettings["fuelType"])}>
                 {FUEL_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -210,6 +229,7 @@ export function SettingsDialog({
             max="30"
             step="0.1"
             value={consumption}
+            disabled={!canEditGlobal}
             onChange={(event) => setConsumption(event.target.value)}
           />
         </Field>

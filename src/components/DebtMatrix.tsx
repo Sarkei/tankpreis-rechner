@@ -6,9 +6,14 @@ import { Card } from "./ui.tsx";
 export function DebtMatrix({
   matrix,
   onSettle,
+  canSettle,
+  myPersonId,
 }: {
   matrix: Matrix;
   onSettle: (debtorId: number, creditorId: number | null) => void;
+  /** Nur eigene Schulden (oder als Admin alle) dürfen beglichen werden. */
+  canSettle: (debtorId: number) => boolean;
+  myPersonId: number | null;
 }) {
   const { drivers, passengers } = matrix;
 
@@ -47,6 +52,7 @@ export function DebtMatrix({
                   className="min-w-[72px] px-1.5 py-2 text-center text-xs font-semibold text-zinc-300"
                 >
                   {passenger.name}
+                  {passenger.id === myPersonId && <span className="block text-[10px] text-blue-400">du</span>}
                 </th>
               ))}
               <th className="hidden min-w-[72px] px-2 py-2 text-right text-xs font-medium uppercase tracking-wide text-zinc-500 sm:table-cell">
@@ -59,6 +65,7 @@ export function DebtMatrix({
               <tr key={driver.id} className="border-t border-zinc-800">
                 <th className="sticky left-0 z-10 max-w-[88px] truncate bg-zinc-900 px-2 py-2 text-left text-sm font-medium text-zinc-100">
                   {driver.name}
+                  {driver.id === myPersonId && <span className="block text-[10px] text-blue-400">du</span>}
                 </th>
                 {passengers.map((passenger) => {
                   const isSelf = driver.id === passenger.id;
@@ -70,14 +77,16 @@ export function DebtMatrix({
                       ) : amount > 0 ? (
                         <span className="inline-flex items-center gap-1">
                           <span className="font-semibold text-red-400">{eur(amount)}</span>
-                          <button
-                            onClick={() => onSettle(passenger.id, driver.id)}
-                            title={`${passenger.name} hat ${driver.name} bezahlt`}
-                            aria-label={`${passenger.name} hat ${driver.name} bezahlt`}
-                            className="rounded-md bg-zinc-800 p-1 text-zinc-400 hover:bg-emerald-600 hover:text-white"
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                          </button>
+                          {canSettle(passenger.id) && (
+                            <button
+                              onClick={() => onSettle(passenger.id, driver.id)}
+                              title={`${passenger.name} hat ${driver.name} bezahlt`}
+                              aria-label={`${passenger.name} hat ${driver.name} bezahlt`}
+                              className="rounded-md bg-zinc-800 p-1 text-zinc-400 hover:bg-emerald-600 hover:text-white"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </span>
                       ) : (
                         <span className="text-emerald-400/80">0,00 €</span>
@@ -98,13 +107,15 @@ export function DebtMatrix({
                 const total = matrix.colTotals[String(passenger.id)] ?? 0;
                 return (
                   <td key={passenger.id} className="px-1.5 py-2 text-center">
-                    {total > 0 ? (
+                    {total > 0 && canSettle(passenger.id) ? (
                       <button
                         onClick={() => onSettle(passenger.id, null)}
                         className="w-full whitespace-nowrap rounded-lg bg-zinc-800 px-1.5 py-1.5 text-[11px] font-medium text-zinc-200 hover:bg-emerald-600 hover:text-white"
                       >
                         {eur(total)} zahlen
                       </button>
+                    ) : total > 0 ? (
+                      <span className="text-[11px] font-medium text-red-400">{eur(total)}</span>
                     ) : (
                       <span className="text-sm text-emerald-400/80" title="ausgeglichen">✓</span>
                     )}

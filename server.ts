@@ -83,6 +83,30 @@ function parseLatLon(value: unknown): { lat: number; lon: number } | null {
   return { lat, lon };
 }
 
+/** Person des angemeldeten Nutzers (Verknüpfung aus der Registrierung). */
+function myPersonId(req: AuthRequest): number | null {
+  return req.user?.person_id ? Number(req.user.person_id) : null;
+}
+
+function isAdminUser(req: AuthRequest): boolean {
+  return Boolean(req.user?.is_admin);
+}
+
+/** Einfache Bremse gegen Passwort-Raten: max. `max` Versuche je Schlüssel und Fenster. */
+const rateHits = new Map<string, { count: number; first: number }>();
+function rateLimit(key: string, max = 10, windowMs = 15 * 60 * 1000): void {
+  const now = Date.now();
+  const entry = rateHits.get(key);
+  if (!entry || now - entry.first > windowMs) {
+    rateHits.set(key, { count: 1, first: now });
+    return;
+  }
+  entry.count += 1;
+  if (entry.count > max) {
+    throw new HttpError(429, "Zu viele Versuche – bitte in ein paar Minuten erneut");
+  }
+}
+
 async function assertPersonExists(id: number, label = "Person"): Promise<void> {
   const { rows } = await pool.query(`SELECT 1 FROM persons WHERE id = $1`, [id]);
   if (rows.length === 0) throw new HttpError(400, `${label} nicht gefunden`);
@@ -126,6 +150,7 @@ async function startServer() {
     wrap(async (req, res) => {
       const email = String(req.body?.email ?? "").trim().toLowerCase();
       const password = String(req.body?.password ?? "");
+      rateLimit(`login:${req.ip ?? "?"}:${email}`);
       const user = await findUserByEmail(email);
       if (!user || !(await checkPassword(password, user.password_hash))) {
         throw new HttpError(401, "E-Mail oder Passwort ist falsch");
@@ -157,6 +182,7 @@ async function startServer() {
     "/api/auth/forgot",
     wrap(async (req, res) => {
       const email = String(req.body?.email ?? "").trim().toLowerCase();
+      rateLimit(`forgot:${req.ip ?? "?"}:${email}`, 5);
       const user = await findUserByEmail(email);
       if (user && user.is_active) {
         const code = await createResetCode(user.id);
@@ -291,6 +317,9 @@ async function startServer() {
     wrap(async (req, res) => {
       const driverId = asId(req.body?.driverId);
       if (!driverId) throw new HttpError(400, "Fahrer fehlt");
+      if (!isAdminUser(req) && driverId !== myPersonId(req)) {
+        throw new HttpError(403, "Du kannst nur Fahrten eintragen, bei denen du selbst fährst");
+      }
       await assertPersonExists(driverId, "Fahrer");
 
       const rawPassengers: unknown[] = Array.isArray(req.body?.passengerIds) ? req.body.passengerIds : [];
@@ -371,6 +400,11 @@ async function startServer() {
     wrap(async (req, res) => {
       const id = asId(req.params.id);
       if (!id) throw new HttpError(400, "Ungültige ID");
+      const { rows } = await pool.query<{ driver_id: number }>(`SELECT driver_id FROM trips WHERE id = $1`, [id]);
+      if (rows.length === 0) throw new HttpError(404, "Fahrt nicht gefunden");
+      if (!isAdminUser(req) && Number(rows[0].driver_id) !== myPersonId(req)) {
+        throw new HttpError(403, "Nur der Fahrer oder ein Admin kann diese Fahrt löschen");
+      }
       const deleted = await pool.query(`DELETE FROM trips WHERE id = $1`, [id]);
       if (deleted.rowCount === 0) throw new HttpError(404, "Fahrt nicht gefunden");
       res.json({ state: await loadState(req.user ? toMe(req.user) : null) });
@@ -383,6 +417,9 @@ async function startServer() {
     wrap(async (req, res) => {
       const debtorId = asId(req.body?.debtorId);
       if (!debtorId) throw new HttpError(400, "Mitfahrer fehlt");
+      if (!isAdminUser(req) && debtorId !== myPersonId(req)) {
+        throw new HttpError(403, "Du kannst nur eigene Schulden als bezahlt markieren");
+      }
       const creditorId = req.body?.creditorId == null ? null : asId(req.body.creditorId);
       if (req.body?.creditorId != null && !creditorId) throw new HttpError(400, "Fahrer-ID ungültig");
 
@@ -468,6 +505,7 @@ async function startServer() {
   // ── Einstellungen ─────────────────────────────────────────────────────────
   app.put(
     "/api/settings",
+    requireAdmin,
     wrap(async (req, res) => {
       const fuelType = req.body?.fuelType as FuelTypeKey | undefined;
       const priceMode = req.body?.priceMode;

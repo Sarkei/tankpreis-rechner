@@ -327,11 +327,21 @@ export default function App() {
               Keine Fahrt passt zu diesen Filtern.
             </div>
           ) : (
-            <TripList trips={visibleTrips} onDelete={requestDeleteTrip} />
+            <TripList
+              trips={visibleTrips}
+              onDelete={requestDeleteTrip}
+              canDelete={(trip) => Boolean(me?.isAdmin) || trip.driverId === mePersonId}
+              myPersonId={mePersonId}
+            />
           )}
         </div>
       ) : (
-        <DebtMatrix matrix={matrix} onSettle={requestSettle} />
+        <DebtMatrix
+          matrix={matrix}
+          onSettle={requestSettle}
+          canSettle={(debtorId) => Boolean(me?.isAdmin) || debtorId === mePersonId}
+          myPersonId={mePersonId}
+        />
       )}
 
       <TripDialog
@@ -350,6 +360,7 @@ export default function App() {
         settings={settings}
         fuelPrice={fuelPrice}
         me={me}
+        canEditGlobal={Boolean(me?.isAdmin)}
         busy={busy}
         onClose={() => setSettingsOpen(false)}
         onSave={saveSettings}

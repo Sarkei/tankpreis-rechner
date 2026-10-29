@@ -165,7 +165,8 @@ export function TripDialog({
     >
       {persons.length === 0 ? (
         <p className="text-sm text-zinc-400">
-          Lege zuerst in den Einstellungen Personen an – danach kannst du Fahrten eintragen.
+          Für dieses Konto ist noch keine Person hinterlegt. Melde dich neu an oder bitte den Admin, dich mit einer
+          Person zu verknüpfen.
         </p>
       ) : (
         <form onSubmit={submit} className="space-y-4">
@@ -174,21 +175,28 @@ export function TripDialog({
               <input type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
             </Field>
             <Field label="Fahrer">
-              <select
-                value={activeDriverId ?? ""}
-                onChange={(event) => {
-                  const id = Number(event.target.value);
-                  setDriverId(id);
-                  setPassengerIds((current) => current.filter((value) => value !== id));
-                }}
-              >
-                {persons.map((person) => (
-                  <option key={person.id} value={person.id}>
-                    {person.name}
-                    {person.id === meId ? " (ich)" : ""}
-                  </option>
-                ))}
-              </select>
+              {me?.isAdmin ? (
+                <select
+                  value={activeDriverId ?? ""}
+                  onChange={(event) => {
+                    const id = Number(event.target.value);
+                    setDriverId(id);
+                    setPassengerIds((current) => current.filter((value) => value !== id));
+                  }}
+                >
+                  {persons.map((person) => (
+                    <option key={person.id} value={person.id}>
+                      {person.name}
+                      {person.id === meId ? " (ich)" : ""}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-200">
+                  {persons.find((person) => person.id === activeDriverId)?.name ?? "–"}
+                  <span className="ml-1.5 text-xs text-zinc-500">(nur du selbst)</span>
+                </p>
+              )}
             </Field>
           </div>
 
