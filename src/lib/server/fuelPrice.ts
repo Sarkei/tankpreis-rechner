@@ -73,7 +73,7 @@ async function scrapePrices(plz: string, fuelType: FuelTypeKey): Promise<{ price
 
 async function loadCacheFromDb(): Promise<CachedPrice | null> {
   const { rows } = await pool.query(
-    `SELECT price, fuel_type, plz, source, stations, fetched_at, error FROM mf_fuel_price_cache WHERE id = 1`
+    `SELECT price, fuel_type, plz, source, stations, fetched_at, error FROM fuel_price_cache WHERE id = 1`
   );
   const row = rows[0];
   if (!row) return null;
@@ -91,7 +91,7 @@ async function loadCacheFromDb(): Promise<CachedPrice | null> {
 async function storeCache(entry: CachedPrice): Promise<void> {
   memoryCache = entry;
   await pool.query(
-    `INSERT INTO mf_fuel_price_cache (id, price, fuel_type, plz, source, stations, fetched_at, error)
+    `INSERT INTO fuel_price_cache (id, price, fuel_type, plz, source, stations, fetched_at, error)
      VALUES (1, $1, $2, $3, $4, $5, $6, $7)
      ON CONFLICT (id) DO UPDATE SET
        price = EXCLUDED.price,

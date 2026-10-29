@@ -32,10 +32,8 @@ bekannte Preis als „veraltet".
   eine Seite mit zwei Tabs (`Fahrten`, `Zahlungen`).
 - **Backend**: Express 4 in TypeScript, liefert API und Frontend aus einem Prozess.
 - **Datenbank**: PostgreSQL 16, Schema beim Start idempotent angelegt.
-  Tabellen mit Präfix `mf_`: `mf_persons`, `mf_trips`, `mf_trip_passengers`,
-  `mf_payments`, `mf_settings`, `mf_fuel_price_cache`. Das Präfix ist Absicht: eine
-  bestehende Installation von Version 1 (mit `users`, `carpool_groups`, altem `trips`)
-  behält ihre Daten unverändert, die neue App legt ihre Tabellen einfach daneben an.
+  Tabellen: `persons`, `trips`, `trip_passengers`, `payments`, `settings`,
+  `fuel_price_cache`.
 
 ### API
 
