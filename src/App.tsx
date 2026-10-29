@@ -1,22 +1,31 @@
-import { AlertTriangle, Car, Cog, HandCoins, Route, TrendingUp } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { AlertTriangle, Car, Cog, HandCoins, Plus, Route, TrendingUp, UserRound } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AppSettings, AppState, Person, Trip } from "./lib/calc.ts";
 import { api, type TripPayload } from "./lib/api.ts";
 import { ageLabel, eur, pricePerLiter } from "./lib/format.ts";
-import { PersonBar } from "./components/PersonBar.tsx";
-import { TripForm } from "./components/TripForm.tsx";
+import { TripDialog } from "./components/TripDialog.tsx";
 import { TripList } from "./components/TripList.tsx";
 import { DebtMatrix } from "./components/DebtMatrix.tsx";
 import { SettingsDialog } from "./components/SettingsDialog.tsx";
 import { ConfirmDialog, type ConfirmState } from "./components/ConfirmDialog.tsx";
+import { Button } from "./components/ui.tsx";
 
 type Tab = "fahrten" | "zahlungen";
+type Filter = "alle" | "fahrer" | "mitfahrer";
+
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: "alle", label: "Alle" },
+  { value: "fahrer", label: "Ich bin gefahren" },
+  { value: "mitfahrer", label: "Ich bin mitgefahren" },
+];
 
 export default function App() {
   const [state, setState] = useState<AppState | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("fahrten");
+  const [filter, setFilter] = useState<Filter>("alle");
   const [busy, setBusy] = useState(false);
+  const [tripOpen, setTripOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
@@ -76,6 +85,15 @@ export default function App() {
   }
 
   const { persons, trips, matrix, settings, fuelPrice } = state;
+  const meId = settings.mePersonId;
+  const me = persons.find((person) => person.id === meId) ?? null;
+
+  const visibleTrips = useMemo(() => {
+    if (filter === "alle" || !meId) return trips;
+    return trips.filter((trip) =>
+      filter === "fahrer" ? trip.driverId === meId : trip.passengers.some((p) => p.id === meId)
+    );
+  }, [filter, meId, trips]);
 
   async function addPerson(name: string) {
     const result = await guard(() => api.addPerson(name));
@@ -185,7 +203,9 @@ export default function App() {
             <Car className="h-5 w-5 text-blue-400" />
             MitFahr.io
           </h1>
-          <p className="mt-0.5 text-xs text-zinc-500">Fahrgemeinschaft abrechnen – ohne Anmeldung</p>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            Fahrgemeinschaft abrechnen{me ? ` · ${me.name}` : " · ohne Anmeldung"}
+          </p>
         </div>
         <button
           onClick={() => setSettingsOpen(true)}
@@ -243,28 +263,68 @@ export default function App() {
 
       {tab === "fahrten" ? (
         <div className="space-y-4">
-          <PersonBar persons={persons} busy={busy} onAdd={addPerson} onDelete={requestDeletePerson} />
-          <TripForm persons={persons} settings={settings} fuelPrice={fuelPrice} busy={busy} onSubmit={addTrip} />
-          <div>
-            <h2 className="mb-2 px-1 text-sm font-semibold text-zinc-300">Fahrten</h2>
-            <TripList trips={trips} onDelete={requestDeleteTrip} />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-1 rounded-xl bg-zinc-900 p-1">
+              {FILTERS.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setFilter(option.value)}
+                  className={
+                    "rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors " +
+                    (filter === option.value
+                      ? "bg-zinc-700 text-zinc-100"
+                      : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200")
+                  }
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <Button onClick={() => setTripOpen(true)} className="shrink-0">
+              <Plus className="h-4 w-4" />
+              Fahrt
+            </Button>
           </div>
+
+          {filter !== "alle" && !meId && (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-800/50 bg-amber-950/30 px-3 py-2.5 text-xs text-amber-200">
+              <UserRound className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                Damit der Filter greift, musst du in den Einstellungen festlegen, wer du bist.{" "}
+                <button onClick={() => setSettingsOpen(true)} className="underline hover:text-amber-100">
+                  Einstellungen öffnen
+                </button>
+              </span>
+            </div>
+          )}
+
+          <TripList trips={visibleTrips} onDelete={requestDeleteTrip} />
         </div>
       ) : (
-        <div className="space-y-4">
-          <DebtMatrix matrix={matrix} onSettle={requestSettle} />
-          <PersonBar persons={persons} busy={busy} onAdd={addPerson} onDelete={requestDeletePerson} />
-        </div>
+        <DebtMatrix matrix={matrix} onSettle={requestSettle} />
       )}
+
+      <TripDialog
+        open={tripOpen}
+        persons={persons}
+        settings={settings}
+        fuelPrice={fuelPrice}
+        busy={busy}
+        onClose={() => setTripOpen(false)}
+        onSubmit={addTrip}
+      />
 
       <SettingsDialog
         open={settingsOpen}
         settings={settings}
         fuelPrice={fuelPrice}
+        persons={persons}
         busy={busy}
         onClose={() => setSettingsOpen(false)}
         onSave={saveSettings}
         onRefresh={refreshPrice}
+        onAddPerson={addPerson}
+        onDeletePerson={requestDeletePerson}
       />
 
       <ConfirmDialog

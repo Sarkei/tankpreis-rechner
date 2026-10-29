@@ -25,6 +25,12 @@ async function request<T>(path: string, init: { method?: string; body?: unknown 
   return data as T;
 }
 
+export interface Place {
+  label: string;
+  lat: number;
+  lon: number;
+}
+
 export interface TripPayload {
   date: string;
   driverId: number;
@@ -32,6 +38,8 @@ export interface TripPayload {
   direction: "HIN" | "RUECK" | "BOTH";
   km?: number;
   kmReturn?: number;
+  fromLabel?: string | null;
+  toLabel?: string | null;
   note?: string | null;
 }
 
@@ -56,4 +64,9 @@ export const api = {
 
   saveSettings: (patch: Partial<AppState["settings"]>) =>
     request<{ state: AppState }>("/api/settings", { method: "PUT", body: patch }),
+
+  searchPlaces: (query: string) => request<{ results: Place[] }>(`/api/geo/search?q=${encodeURIComponent(query)}`),
+
+  routeKm: (from: { lat: number; lon: number }, to: { lat: number; lon: number }) =>
+    request<{ km: number }>(`/api/geo/route?from=${from.lat},${from.lon}&to=${to.lat},${to.lon}`),
 };
