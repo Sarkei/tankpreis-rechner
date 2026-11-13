@@ -49,6 +49,8 @@ export function AuthScreen({
   initialMode?: Mode;
 }) {
   const [mode, setMode] = useState<Mode>(initialMode);
+  // Auf der Demo-Domain gibt es keine Registrierung — sonst wäre der Weg in die echte App sichtbar.
+  const isDemoHost = typeof location !== "undefined" && location.hostname.startsWith("demo-");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -158,9 +160,11 @@ export function AuthScreen({
               {busy ? "Anmelden…" : "Anmelden"}
             </Button>
             <div className="flex items-center justify-between text-xs">
-              <button type="button" onClick={() => switchMode("register")} className="text-accent hover:underline">
-                Neues Konto anlegen
-              </button>
+              {!isDemoHost && (
+                <button type="button" onClick={() => switchMode("register")} className="text-accent hover:underline">
+                  Neues Konto anlegen
+                </button>
+              )}
               <button type="button" onClick={() => switchMode("forgot")} className="text-muted hover:text-ink">
                 Passwort vergessen?
               </button>
