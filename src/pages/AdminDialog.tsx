@@ -101,25 +101,25 @@ export function AdminDialog({
     >
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <p className="flex items-center gap-1.5 text-sm text-zinc-300">
-            <ShieldCheck className="h-4 w-4 text-blue-400" />
+          <p className="flex items-center gap-1.5 text-sm text-ink">
+            <ShieldCheck className="h-4 w-4 text-accent" />
             {users.length} Konten
           </p>
           <button
             onClick={() => void load()}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted hover:bg-surface-2 hover:text-ink"
           >
             <RefreshCw className={"h-3.5 w-3.5 " + (loading ? "animate-spin" : "")} />
             neu laden
           </button>
         </div>
 
-        {error && <p className="rounded-lg bg-red-950/40 px-3 py-2 text-xs text-red-300">{error}</p>}
+        {error && <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">{error}</p>}
 
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wide text-zinc-500">
+              <tr className="text-left text-[11px] uppercase tracking-wide text-muted">
                 <th className="py-2 pr-2">Name</th>
                 <th className="py-2 pr-2">E-Mail</th>
                 <th className="py-2 pr-2 whitespace-nowrap">Letzter Login</th>
@@ -129,21 +129,21 @@ export function AdminDialog({
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr key={user.id} className="border-t border-zinc-800">
-                  <td className="py-2 pr-2 text-zinc-100">
+                <tr key={user.id} className="border-t border-line">
+                  <td className="py-2 pr-2 text-ink">
                     {user.firstName} {user.lastName}
                     {user.isAdmin && (
-                      <span className="ml-1.5 rounded bg-blue-600/20 px-1.5 py-0.5 text-[10px] uppercase text-blue-300">
+                      <span className="ml-1.5 rounded bg-accent/20 px-1.5 py-0.5 text-[10px] uppercase text-accent">
                         Admin
                       </span>
                     )}
                     {user.personName && user.personName !== `${user.firstName} ${user.lastName}` && (
-                      <div className="text-[11px] text-zinc-500">Person: {user.personName}</div>
+                      <div className="text-[11px] text-muted">Person: {user.personName}</div>
                     )}
                   </td>
-                  <td className="py-2 pr-2 text-xs text-zinc-400">{user.email}</td>
-                  <td className="py-2 pr-2 text-xs text-zinc-400">{formatDate(user.lastLoginAt)}</td>
-                  <td className="py-2 pr-2 text-center text-xs text-zinc-400">
+                  <td className="py-2 pr-2 text-xs text-muted">{user.email}</td>
+                  <td className="py-2 pr-2 text-xs text-muted">{formatDate(user.lastLoginAt)}</td>
+                  <td className="py-2 pr-2 text-center text-xs text-muted">
                     {user.tripsAsDriver} / {user.tripsAsPassenger}
                   </td>
                   <td className="py-2">
@@ -156,7 +156,7 @@ export function AdminDialog({
                         }}
                         title="Passwort setzen"
                         aria-label={`Passwort für ${user.email} setzen`}
-                        className="rounded-md bg-zinc-800 p-1.5 text-zinc-400 hover:bg-blue-600 hover:text-white"
+                        className="rounded-md bg-surface-2 p-1.5 text-muted hover:bg-accent hover:text-on-accent"
                       >
                         <KeyRound className="h-3.5 w-3.5" />
                       </button>
@@ -168,7 +168,7 @@ export function AdminDialog({
                           }}
                           title="Konto löschen"
                           aria-label={`${user.email} löschen`}
-                          className="rounded-md bg-zinc-800 p-1.5 text-zinc-400 hover:bg-red-600 hover:text-white"
+                          className="rounded-md bg-surface-2 p-1.5 text-muted hover:bg-danger hover:text-white"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -179,7 +179,7 @@ export function AdminDialog({
               ))}
               {users.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={5} className="py-4 text-center text-sm text-zinc-500">
+                  <td colSpan={5} className="py-4 text-center text-sm text-muted">
                     Noch keine Konten.
                   </td>
                 </tr>
@@ -187,7 +187,7 @@ export function AdminDialog({
             </tbody>
           </table>
         </div>
-        <p className="text-xs leading-relaxed text-zinc-500">
+        <p className="text-xs leading-relaxed text-muted">
           Aktionen in der letzten Spalte: Passwort neu setzen (der Nutzer meldet sich danach mit dem neuen Passwort
           an) oder das Konto löschen. Fahrten der Person bleiben erhalten.
         </p>
@@ -210,8 +210,8 @@ export function AdminDialog({
         }
       >
         <div className="space-y-3">
-          <p className="text-sm text-zinc-300">
-            Neues Passwort für <span className="font-medium text-zinc-100">{pwUser?.email}</span>. Der Nutzer kann sich
+          <p className="text-sm text-ink">
+            Neues Passwort für <span className="font-medium text-ink">{pwUser?.email}</span>. Der Nutzer kann sich
             damit sofort anmelden – kein Code nötig.
           </p>
           <Field label="Passwort" hint="Mindestens 8 Zeichen.">
@@ -222,7 +222,7 @@ export function AdminDialog({
               placeholder="z. B. Mitfahr-2026"
             />
           </Field>
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {error && <p className="text-xs text-danger">{error}</p>}
         </div>
       </Modal>
 
@@ -243,7 +243,7 @@ export function AdminDialog({
           </>
         }
       >
-        <p className="text-sm text-zinc-300">
+        <p className="text-sm text-ink">
           {confirmDelete?.email} kann sich danach nicht mehr anmelden. Fahrten und Schulden der zugehörigen Person
           bleiben in der Abrechnung erhalten.
         </p>

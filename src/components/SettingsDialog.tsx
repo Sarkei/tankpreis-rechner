@@ -83,15 +83,15 @@ export function SettingsDialog({
       }
     >
       <div className="space-y-4">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-sm">
+        <div className="rounded-xl border border-line bg-surface-2 p-3 text-sm">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-zinc-400">Aktueller Preis</span>
-            <span className="shrink-0 font-semibold text-zinc-100">
+            <span className="text-muted">Aktueller Preis</span>
+            <span className="shrink-0 font-semibold text-ink">
               {pricePerLiter(fuelPrice.price)}
               {fuelPrice.price ? "/l" : ""}
             </span>
           </div>
-          <div className="mt-1 flex items-start justify-between gap-3 text-xs text-zinc-500">
+          <div className="mt-1 flex items-start justify-between gap-3 text-xs text-muted">
             <span className="min-w-0 flex-1">
               {fuelPrice.source === "manual"
                 ? "manuell gesetzt"
@@ -105,22 +105,22 @@ export function SettingsDialog({
             <button
               onClick={onRefresh}
               disabled={busy}
-              className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-50"
+              className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-muted hover:bg-surface-2 hover:text-ink disabled:opacity-50"
             >
               <RefreshCw className={"h-3.5 w-3.5 " + (busy ? "animate-spin" : "")} />
               neu holen
             </button>
           </div>
-          {fuelPrice.error && <p className="mt-2 text-xs text-amber-400">{fuelPrice.error}</p>}
+          {fuelPrice.error && <p className="mt-2 text-xs text-warn">{fuelPrice.error}</p>}
           {fuelPrice.stations !== null && (
-            <p className="mt-1 text-xs text-zinc-600">
+            <p className="mt-1 text-xs text-placeholder">
               Durchschnitt der 5 günstigsten von {fuelPrice.stations} Tankstellen im 10-km-Umkreis
             </p>
           )}
         </div>
 
         {!canEditGlobal && (
-          <p className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-400">
+          <p className="rounded-lg border border-line bg-surface-2 px-3 py-2 text-xs text-muted">
             Tankpreis, PLZ und Verbrauch gelten für alle und lassen sich nur vom Admin ändern.
           </p>
         )}
@@ -137,8 +137,8 @@ export function SettingsDialog({
             />
           </Field>
         ) : (
-          <p className="text-xs text-zinc-500">
-            Preisquelle: <span className="text-zinc-300">{priceMode === "manual" ? "manuell" : "automatisch"}</span>
+          <p className="text-xs text-muted">
+            Preisquelle: <span className="text-ink">{priceMode === "manual" ? "manuell" : "automatisch"}</span>
           </p>
         )}
 
@@ -179,8 +179,8 @@ export function SettingsDialog({
           </>
         )}
 
-        <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950 p-3">
-          <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Meine Zuhause-Adresse</span>
+        <div className="space-y-3 rounded-xl border border-line bg-surface-2 p-3">
+          <span className="ui-label">Meine Zuhause-Adresse</span>
           <RouteField
             label="Adresse"
             value={home}
@@ -188,7 +188,7 @@ export function SettingsDialog({
             placeholder="z. B. Bahnhofstraße 5 Traunstein"
           />
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted">
               {me?.home ? "Steht beim Anlegen einer Fahrt als Schnellwahl bereit." : "Noch keine Adresse gespeichert."}
             </p>
             <div className="flex gap-2">

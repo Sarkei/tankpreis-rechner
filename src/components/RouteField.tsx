@@ -62,9 +62,9 @@ export function RouteField({
 
   return (
     <div className="relative" ref={box}>
-      <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</span>
+      <span className="ui-label mb-1.5 block">{label}</span>
       <div className="relative">
-        <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+        <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
         <input
           value={text}
           onChange={(event) => handleText(event.target.value)}
@@ -83,7 +83,7 @@ export function RouteField({
               setOpen(false);
             }}
             aria-label="Feld leeren"
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-zinc-500 hover:text-zinc-200"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted hover:text-ink"
           >
             <X className="h-4 w-4" />
           </button>
@@ -91,7 +91,7 @@ export function RouteField({
       </div>
 
       {open && results.length > 0 && (
-        <ul className="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl shadow-black/50">
+        <ul className="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-line-strong bg-surface shadow-[var(--shadow)]">
           {results.map((place) => (
             <li key={`${place.lat}-${place.lon}-${place.label}`}>
               <button
@@ -103,11 +103,11 @@ export function RouteField({
                   setOpen(false);
                   setResults([]);
                 }}
-                className="flex w-full items-start gap-2 px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+                className="flex w-full items-start gap-2 px-3 py-2 text-left text-sm text-ink hover:bg-surface-2 hover:text-ink"
               >
                 <span className="flex-1">{shortPlaceLabel(place.label)}</span>
                 {place.category && (
-                  <span className="mt-0.5 shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-zinc-400">
+                  <span className="mt-0.5 shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted">
                     {place.category}
                   </span>
                 )}
@@ -117,15 +117,15 @@ export function RouteField({
         </ul>
       )}
 
-      <p className="mt-1 flex items-center gap-1 text-xs text-zinc-500">
+      <p className="mt-1 flex items-center gap-1 text-xs text-muted">
         {loading ? (
           <>
             <Search className="h-3 w-3 animate-pulse" /> sucht…
           </>
         ) : error ? (
-          <span className="text-amber-400">{error}</span>
+          <span className="text-warn">{error}</span>
         ) : value ? (
-          <span className="text-emerald-400/90">Ort übernommen – Strecke wird berechnet</span>
+          <span className="text-accent">Ort übernommen – Strecke wird berechnet</span>
         ) : (
           "Ort suchen und aus der Liste wählen"
         )}

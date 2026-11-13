@@ -37,7 +37,7 @@ export function ConfirmDialog({
         </>
       }
     >
-      <p className="text-sm leading-relaxed text-zinc-300">{state?.message}</p>
+      <p className="text-sm leading-relaxed text-ink">{state?.message}</p>
     </Modal>
   );
 }

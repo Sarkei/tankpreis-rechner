@@ -5,11 +5,11 @@ import { useEffect, type ButtonHTMLAttributes, type ReactNode } from "react";
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "success";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-blue-600 hover:bg-blue-500 text-white",
-  secondary: "bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700",
-  ghost: "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800",
-  danger: "bg-red-600 hover:bg-red-500 text-white",
-  success: "bg-emerald-600 hover:bg-emerald-500 text-white",
+  primary: "bg-accent hover:bg-accent-hover text-on-accent border border-accent",
+  secondary: "bg-surface-2 hover:bg-surface-3 text-ink border border-line-strong",
+  ghost: "text-muted hover:text-ink hover:bg-surface-2 border border-transparent",
+  danger: "bg-danger hover:opacity-90 text-white border border-danger",
+  success: "bg-accent hover:bg-accent-hover text-on-accent border border-accent",
 };
 
 export function Button({
@@ -24,7 +24,7 @@ export function Button({
       className={clsx(
         "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium",
         "transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
         variants[variant],
         className
       )}
@@ -36,7 +36,9 @@ export function Button({
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={clsx("rounded-2xl border border-zinc-800 bg-zinc-900", className)}>{children}</div>
+    <div className={clsx("rounded-2xl border border-line bg-surface shadow-[var(--shadow-sm)]", className)}>
+      {children}
+    </div>
   );
 }
 
@@ -68,7 +70,7 @@ export function Modal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4">
       <div
         className="absolute inset-0"
         onClick={onClose}
@@ -78,16 +80,16 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         className={
-          "relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-zinc-800 bg-zinc-900 p-5 sm:rounded-2xl " +
+          "relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-line bg-surface p-5 shadow-[var(--shadow)] sm:rounded-2xl " +
           (size === "wide" ? "sm:max-w-3xl" : "sm:max-w-md")
         }
       >
         <div className="mb-4 flex items-start justify-between gap-4">
-          <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
+          <h2 className="text-lg font-semibold text-ink">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Schließen"
-            className="rounded-lg p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+            className="rounded-lg p-1 text-muted hover:bg-surface-2 hover:text-ink"
           >
             <X className="h-5 w-5" />
           </button>
@@ -111,7 +113,7 @@ export function Segmented<T extends string>({
   className?: string;
 }) {
   return (
-    <div className={clsx("grid gap-1 rounded-xl bg-zinc-950 p-1", className)} style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+    <div className={clsx("grid gap-1 rounded-xl bg-surface-2 p-1", className)} style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
       {options.map((option) => (
         <button
           key={option.value}
@@ -120,8 +122,8 @@ export function Segmented<T extends string>({
           className={clsx(
             "rounded-lg px-2 py-2 text-sm font-medium transition-colors",
             value === option.value
-              ? "bg-blue-600 text-white"
-              : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+              ? "bg-accent text-on-accent"
+              : "text-muted hover:bg-surface-3 hover:text-ink"
           )}
         >
           {option.label}
@@ -134,9 +136,9 @@ export function Segmented<T extends string>({
 export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
   return (
     <label className="block space-y-1.5">
-      <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</span>
+      <span className="ui-label block">{label}</span>
       {children}
-      {hint && <span className="block text-xs text-zinc-500">{hint}</span>}
+      {hint && <span className="block text-xs text-muted">{hint}</span>}
     </label>
   );
 }

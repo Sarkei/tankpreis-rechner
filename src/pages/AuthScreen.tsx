@@ -6,8 +6,8 @@ import { Button, Field } from "../components/ui.tsx";
 
 type Mode = "login" | "register" | "forgot";
 
-const BORDER_OK = "border-emerald-500 focus:border-emerald-500 ring-1 ring-emerald-500/30";
-const BORDER_BAD = "border-red-500 focus:border-red-500 ring-1 ring-red-500/30";
+const BORDER_OK = "border-accent focus:border-accent ring-1 ring-accent/30";
+const BORDER_BAD = "border-danger focus:border-danger ring-1 ring-danger/30";
 
 /** Muss zu `passwordProblems` im Server passen. */
 function passwordProblems(password: string): string[] {
@@ -30,7 +30,7 @@ function PasswordRules({ password }: { password: string }) {
   return (
     <ul className="space-y-1 text-xs">
       {checks.map((check) => (
-        <li key={check.label} className={check.ok ? "text-emerald-400" : "text-zinc-500"}>
+        <li key={check.label} className={check.ok ? "text-accent" : "text-muted"}>
           {check.ok ? <Check className="mr-1 inline h-3 w-3" /> : <X className="mr-1 inline h-3 w-3" />}
           {check.label}
         </li>
@@ -108,14 +108,14 @@ export function AuthScreen({
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-4 py-10">
       <div className="mb-6 text-center">
-        <h1 className="flex items-center justify-center gap-2 text-2xl font-semibold text-zinc-50">
-          <Car className="h-6 w-6 text-blue-400" />
+        <h1 className="flex items-center justify-center gap-2 text-2xl font-semibold text-ink">
+          <Car className="h-6 w-6 text-accent" />
           MitFahr.io
         </h1>
-        <p className="mt-1 text-sm text-zinc-500">Fahrgemeinschaft abrechnen</p>
+        <p className="mt-1 text-sm text-muted">Fahrgemeinschaft abrechnen</p>
       </div>
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+      <div className="rounded-2xl border border-line bg-surface p-5">
         {mode === "login" && (
           <form
             className="space-y-4"
@@ -127,8 +127,8 @@ export function AuthScreen({
               });
             }}
           >
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-100">
-              <LogIn className="h-4 w-4 text-blue-400" />
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
+              <LogIn className="h-4 w-4 text-accent" />
               Anmelden
             </h2>
             <Field label="E-Mail">
@@ -151,15 +151,15 @@ export function AuthScreen({
                 required
               />
             </Field>
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && <p className="text-sm text-danger">{error}</p>}
             <Button type="submit" className="w-full" disabled={busy}>
               {busy ? "Anmelden…" : "Anmelden"}
             </Button>
             <div className="flex items-center justify-between text-xs">
-              <button type="button" onClick={() => switchMode("register")} className="text-blue-400 hover:text-blue-300">
+              <button type="button" onClick={() => switchMode("register")} className="text-accent hover:underline">
                 Neues Konto anlegen
               </button>
-              <button type="button" onClick={() => switchMode("forgot")} className="text-zinc-400 hover:text-zinc-200">
+              <button type="button" onClick={() => switchMode("forgot")} className="text-muted hover:text-ink">
                 Passwort vergessen?
               </button>
             </div>
@@ -184,8 +184,8 @@ export function AuthScreen({
               });
             }}
           >
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-100">
-              <UserPlus className="h-4 w-4 text-blue-400" />
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
+              <UserPlus className="h-4 w-4 text-accent" />
               Konto anlegen
             </h2>
             <div className="grid grid-cols-2 gap-3">
@@ -240,7 +240,7 @@ export function AuthScreen({
               />
             </Field>
             {password2.length > 0 && !registerMatch && (
-              <p className="text-xs text-red-400">Die Passwörter stimmen nicht überein.</p>
+              <p className="text-xs text-danger">Die Passwörter stimmen nicht überein.</p>
             )}
 
             {persons.length > 0 && (
@@ -255,19 +255,19 @@ export function AuthScreen({
                 </select>
               </Field>
             )}
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && <p className="text-sm text-danger">{error}</p>}
             <Button type="submit" className="w-full" disabled={busy || !registerReady}>
               {busy ? "Anlegen…" : "Konto anlegen"}
             </Button>
             {!registerReady && (
-              <p className="text-center text-xs text-zinc-500">
+              <p className="text-center text-xs text-muted">
                 Bitte alle Felder ausfüllen, Passwortregeln erfüllen und beide Passwörter angleichen.
               </p>
             )}
             <button
               type="button"
               onClick={() => switchMode("login")}
-              className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200"
+              className="flex items-center gap-1 text-xs text-muted hover:text-ink"
             >
               <ArrowLeft className="h-3 w-3" /> zurück zur Anmeldung
             </button>
@@ -276,8 +276,8 @@ export function AuthScreen({
 
         {mode === "forgot" && (
           <div className="space-y-4">
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-100">
-              <KeyRound className="h-4 w-4 text-blue-400" />
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-ink">
+              <KeyRound className="h-4 w-4 text-accent" />
               Passwort zurücksetzen
             </h2>
 
@@ -302,7 +302,7 @@ export function AuthScreen({
                     required
                   />
                 </Field>
-                {error && <p className="text-sm text-red-400">{error}</p>}
+                {error && <p className="text-sm text-danger">{error}</p>}
                 <Button type="submit" className="w-full" disabled={busy}>
                   <Mail className="h-4 w-4" />
                   {busy ? "Sende…" : "Code schicken"}
@@ -323,7 +323,7 @@ export function AuthScreen({
                   });
                 }}
               >
-                {info && <p className="text-xs text-emerald-400">{info}</p>}
+                {info && <p className="text-xs text-accent">{info}</p>}
                 <Field label="6-stelliger Code aus der Mail">
                   <input
                     inputMode="numeric"
@@ -335,7 +335,7 @@ export function AuthScreen({
                     required
                   />
                 </Field>
-                {error && <p className="text-sm text-red-400">{error}</p>}
+                {error && <p className="text-sm text-danger">{error}</p>}
                 <Button type="submit" className="w-full" disabled={busy || code.length !== 6}>
                   {busy ? "Prüfe…" : "Code prüfen"}
                 </Button>
@@ -346,7 +346,7 @@ export function AuthScreen({
                     setInfo(null);
                     setError(null);
                   }}
-                  className="text-xs text-zinc-400 hover:text-zinc-200"
+                  className="text-xs text-muted hover:text-ink"
                 >
                   anderen Code anfordern
                 </button>
@@ -366,7 +366,7 @@ export function AuthScreen({
                   });
                 }}
               >
-                <p className="flex items-center gap-1.5 text-xs text-emerald-400">
+                <p className="flex items-center gap-1.5 text-xs text-accent">
                   <ShieldCheck className="h-3.5 w-3.5" /> Code bestätigt – jetzt neues Passwort setzen
                 </p>
                 <Field label="Neues Passwort">
@@ -397,9 +397,9 @@ export function AuthScreen({
                   />
                 </Field>
                 {newPassword2.length > 0 && !resetMatch && (
-                  <p className="text-xs text-red-400">Die Passwörter stimmen nicht überein.</p>
+                  <p className="text-xs text-danger">Die Passwörter stimmen nicht überein.</p>
                 )}
-                {error && <p className="text-sm text-red-400">{error}</p>}
+                {error && <p className="text-sm text-danger">{error}</p>}
                 <Button type="submit" className="w-full" disabled={busy || !resetReady}>
                   {busy ? "Speichere…" : "Passwort speichern"}
                 </Button>
@@ -409,7 +409,7 @@ export function AuthScreen({
             <button
               type="button"
               onClick={() => switchMode("login")}
-              className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200"
+              className="flex items-center gap-1 text-xs text-muted hover:text-ink"
             >
               <ArrowLeft className="h-3 w-3" /> zurück zur Anmeldung
             </button>

@@ -79,7 +79,7 @@ export default function App() {
   if (!authReady) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-zinc-500">Lädt…</p>
+        <p className="text-sm text-muted">Lädt…</p>
       </div>
     );
   }
@@ -87,9 +87,9 @@ export default function App() {
   if (loadError && !state) {
     return (
       <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 p-6 text-center">
-        <AlertTriangle className="h-8 w-8 text-amber-400" />
-        <p className="text-sm text-zinc-400">{loadError}</p>
-        <button onClick={() => void load()} className="rounded-xl bg-blue-600 px-4 py-2 text-sm text-white">
+        <AlertTriangle className="h-8 w-8 text-warn" />
+        <p className="text-sm text-muted">{loadError}</p>
+        <button onClick={() => void load()} className="rounded-xl bg-accent px-4 py-2 text-sm text-on-accent">
           Erneut laden
         </button>
       </div>
@@ -207,11 +207,11 @@ export default function App() {
     <div className="mx-auto min-h-screen w-full max-w-2xl px-4 pb-16 pt-5">
       <header className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-xl font-semibold text-zinc-50">
-            <Car className="h-5 w-5 text-blue-400" />
+          <h1 className="flex items-center gap-2 text-xl font-semibold text-ink">
+            <Car className="h-5 w-5 text-accent" />
             MitFahr.io
           </h1>
-          <p className="mt-0.5 truncate text-xs text-zinc-500">
+          <p className="mt-0.5 truncate text-xs text-muted">
             {me ? `${me.firstName} ${me.lastName}${me.isAdmin ? " · Admin" : ""}` : "Fahrgemeinschaft abrechnen"}
           </p>
         </div>
@@ -221,7 +221,7 @@ export default function App() {
               onClick={() => setAdminOpen(true)}
               aria-label="Admin-Dashboard"
               title="Admin-Dashboard"
-              className="rounded-xl border border-zinc-800 bg-zinc-900 p-2.5 text-blue-300 hover:border-blue-700 hover:text-blue-200"
+              className="rounded-xl border border-line bg-surface p-2.5 text-accent hover:border-accent hover:text-accent"
             >
               <ShieldCheck className="h-5 w-5" />
             </button>
@@ -229,7 +229,7 @@ export default function App() {
           <button
             onClick={() => setSettingsOpen(true)}
             aria-label="Einstellungen"
-            className="rounded-xl border border-zinc-800 bg-zinc-900 p-2.5 text-zinc-400 hover:border-zinc-700 hover:text-zinc-100"
+            className="rounded-xl border border-line bg-surface p-2.5 text-muted hover:border-line-strong hover:text-ink"
           >
             <Cog className="h-5 w-5" />
           </button>
@@ -237,7 +237,7 @@ export default function App() {
             onClick={() => void logout()}
             aria-label="Abmelden"
             title="Abmelden"
-            className="rounded-xl border border-zinc-800 bg-zinc-900 p-2.5 text-zinc-400 hover:border-zinc-700 hover:text-red-300"
+            className="rounded-xl border border-line bg-surface p-2.5 text-muted hover:border-line-strong hover:text-danger"
           >
             <LogOut className="h-5 w-5" />
           </button>
@@ -246,16 +246,16 @@ export default function App() {
 
       <button
         onClick={() => setSettingsOpen(true)}
-        className="mb-4 flex w-full items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-left hover:border-zinc-700"
+        className="mb-4 flex w-full items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-left hover:border-line-strong"
       >
         <div className="flex items-center gap-2 text-sm">
-          <TrendingUp className="h-4 w-4 text-emerald-400" />
-          <span className="font-medium text-zinc-100">
+          <TrendingUp className="h-4 w-4 text-accent" />
+          <span className="font-medium text-ink">
             {fuelPrice.price ? `${pricePerLiter(fuelPrice.price)}/l` : "kein Tankpreis"}
           </span>
-          <span className="text-zinc-500">{fuelPrice.fuelLabel}</span>
+          <span className="text-muted">{fuelPrice.fuelLabel}</span>
         </div>
-        <span className="text-xs text-zinc-500">
+        <span className="text-xs text-muted">
           {fuelPrice.source === "manual"
             ? "manuell"
             : fuelPrice.stale
@@ -264,12 +264,12 @@ export default function App() {
         </span>
       </button>
 
-      <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-zinc-900 p-1">
+      <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-surface p-1">
         <button
           onClick={() => setTab("fahrten")}
           className={
             "flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors " +
-            (tab === "fahrten" ? "bg-blue-600 text-white" : "text-zinc-400 hover:text-zinc-200")
+            (tab === "fahrten" ? "bg-accent text-on-accent" : "text-muted hover:text-ink")
           }
         >
           <Route className="h-4 w-4" />
@@ -280,7 +280,7 @@ export default function App() {
           onClick={() => setTab("zahlungen")}
           className={
             "flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors " +
-            (tab === "zahlungen" ? "bg-blue-600 text-white" : "text-zinc-400 hover:text-zinc-200")
+            (tab === "zahlungen" ? "bg-accent text-on-accent" : "text-muted hover:text-ink")
           }
         >
           <HandCoins className="h-4 w-4" />
@@ -292,7 +292,7 @@ export default function App() {
       {tab === "fahrten" ? (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-1 rounded-xl bg-zinc-900 p-1">
+            <div className="flex flex-wrap items-center gap-1 rounded-xl bg-surface p-1">
               <FilterMenu label="Fahrer" options={driverOptions} value={driverFilter} onChange={setDriverFilter} />
               <FilterMenu
                 label="Mitfahrer"
@@ -306,7 +306,7 @@ export default function App() {
                     setDriverFilter(null);
                     setPassengerFilter(null);
                   }}
-                  className="rounded-lg px-2 py-1.5 text-xs text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+                  className="rounded-lg px-2 py-1.5 text-xs text-muted hover:bg-surface-2 hover:text-ink"
                 >
                   zurücksetzen
                 </button>
@@ -319,11 +319,11 @@ export default function App() {
           </div>
 
           {driverFilter === mePersonId && mePersonId !== null && (
-            <p className="px-1 text-xs text-zinc-500">Zeigt nur deine eigenen Fahrten als Fahrer.</p>
+            <p className="px-1 text-xs text-muted">Zeigt nur deine eigenen Fahrten als Fahrer.</p>
           )}
 
           {visibleTrips.length === 0 && trips.length > 0 && (driverFilter !== null || passengerFilter !== null) ? (
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5 text-sm text-zinc-400">
+            <div className="rounded-xl border border-line bg-surface p-5 text-sm text-muted">
               Keine Fahrt passt zu diesen Filtern.
             </div>
           ) : (
@@ -385,7 +385,7 @@ export default function App() {
 
       {toast && (
         <div className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-4">
-          <div className="pointer-events-auto rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2.5 text-sm text-zinc-100 shadow-lg shadow-black/40">
+          <div className="pointer-events-auto rounded-xl border border-line-strong bg-surface-2 px-4 py-2.5 text-sm text-ink shadow-[var(--shadow)]">
             {toast}
           </div>
         </div>

@@ -33,31 +33,31 @@ export function FilterMenu({
         className={
           "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors " +
           (active
-            ? "bg-blue-600/20 text-blue-200 ring-1 ring-blue-500/50"
-            : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200")
+            ? "bg-accent/20 text-accent ring-1 ring-accent/40"
+            : "text-muted hover:bg-surface-2 hover:text-ink")
         }
       >
         <UserRound className="h-3.5 w-3.5" />
-        <span className="text-zinc-500">{label}:</span>
+        <span className="text-muted">{label}:</span>
         {active ? active.name : "Alle"}
         <ChevronDown className="h-3 w-3" />
       </button>
 
       {open && (
-        <div className="absolute left-0 z-30 mt-1 max-h-64 w-56 overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-900 py-1 shadow-xl shadow-black/50">
+        <div className="absolute left-0 z-30 mt-1 max-h-64 w-56 overflow-y-auto rounded-xl border border-line-strong bg-surface py-1 shadow-[var(--shadow)]">
           <button
             type="button"
             onClick={() => {
               onChange(null);
               setOpen(false);
             }}
-            className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+            className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-ink hover:bg-surface-2 hover:text-ink"
           >
             Alle
-            {value === null && <Check className="h-4 w-4 text-blue-400" />}
+            {value === null && <Check className="h-4 w-4 text-accent" />}
           </button>
           {options.length === 0 && (
-            <p className="px-3 py-2 text-xs text-zinc-500">Noch keine Fahrten erfasst.</p>
+            <p className="px-3 py-2 text-xs text-muted">Noch keine Fahrten erfasst.</p>
           )}
           {options.map((option) => (
             <button
@@ -67,10 +67,10 @@ export function FilterMenu({
                 onChange(option.id);
                 setOpen(false);
               }}
-              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-ink hover:bg-surface-2 hover:text-ink"
             >
               {option.name}
-              {value === option.id && <Check className="h-4 w-4 text-blue-400" />}
+              {value === option.id && <Check className="h-4 w-4 text-accent" />}
             </button>
           ))}
         </div>

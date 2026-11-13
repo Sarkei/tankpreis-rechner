@@ -164,7 +164,7 @@ export function TripDialog({
       }
     >
       {persons.length === 0 ? (
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted">
           Für dieses Konto ist noch keine Person hinterlegt. Melde dich neu an oder bitte den Admin, dich mit einer
           Person zu verknüpfen.
         </p>
@@ -192,16 +192,16 @@ export function TripDialog({
                   ))}
                 </select>
               ) : (
-                <p className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-200">
+                <p className="rounded-lg border border-line-strong bg-surface-2 px-3 py-2.5 text-sm text-ink">
                   {persons.find((person) => person.id === activeDriverId)?.name ?? "–"}
-                  <span className="ml-1.5 text-xs text-zinc-500">(nur du selbst)</span>
+                  <span className="ml-1.5 text-xs text-muted">(nur du selbst)</span>
                 </p>
               )}
             </Field>
           </div>
 
-          <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950 p-3">
-            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+          <div className="space-y-3 rounded-xl border border-line bg-surface-2 p-3">
+            <div className="ui-label flex items-center gap-2">
               <Route className="h-3.5 w-3.5" />
               Strecke
             </div>
@@ -211,7 +211,7 @@ export function TripDialog({
                 <button
                   type="button"
                   onClick={() => setFrom({ ...me.home! })}
-                  className="inline-flex items-center gap-1 rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700"
+                  className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-2 py-1 text-xs text-ink hover:bg-surface-3"
                 >
                   <Home className="h-3 w-3" /> Zuhause übernehmen
                 </button>
@@ -228,19 +228,19 @@ export function TripDialog({
                 <button
                   type="button"
                   onClick={() => setTo({ ...me.home! })}
-                  className="inline-flex items-center gap-1 rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-700"
+                  className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-2 py-1 text-xs text-ink hover:bg-surface-3"
                 >
                   <Home className="h-3 w-3" /> Zuhause als Ziel
                 </button>
               )}
             </div>
-            {routeState === "loading" && <p className="text-xs text-zinc-400">Strecke wird berechnet…</p>}
+            {routeState === "loading" && <p className="text-xs text-muted">Strecke wird berechnet…</p>}
             {routeState === "done" && (
-              <p className="text-xs text-emerald-400">
+              <p className="text-xs text-accent">
                 Strecke berechnet – Kilometer unten angepasst, bei Bedarf überschreiben.
               </p>
             )}
-            {routeState === "error" && <p className="text-xs text-amber-400">{routeError}</p>}
+            {routeState === "error" && <p className="text-xs text-warn">{routeError}</p>}
           </div>
 
           <Field label="Richtung">
@@ -287,7 +287,7 @@ export function TripDialog({
           </div>
 
           <div className="space-y-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">Mitfahrer</span>
+            <span className="ui-label">Mitfahrer</span>
             <div className="flex flex-wrap gap-2">
               {persons
                 .filter((person) => person.id !== activeDriverId)
@@ -301,8 +301,8 @@ export function TripDialog({
                       className={
                         "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors " +
                         (active
-                          ? "border-blue-500 bg-blue-600/20 text-blue-200"
-                          : "border-zinc-700 bg-zinc-800 text-zinc-300 hover:border-zinc-500")
+                          ? "border-accent bg-accent-soft text-accent-ink"
+                          : "border-line-strong bg-surface-2 text-ink hover:border-muted")
                       }
                     >
                       {active && <Check className="h-3.5 w-3.5" />}
@@ -310,32 +310,32 @@ export function TripDialog({
                     </button>
                   );
                 })}
-              {persons.length === 1 && <span className="text-sm text-zinc-500">Nur der Fahrer ist unterwegs.</span>}
+              {persons.length === 1 && <span className="text-sm text-muted">Nur der Fahrer ist unterwegs.</span>}
             </div>
           </div>
 
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-sm">
+          <div className="rounded-xl border border-line bg-surface-2 p-3 text-sm">
             {!price ? (
-              <p className="text-amber-400">Kein Tankpreis verfügbar – prüfe die Einstellungen (PLZ, Preis).</p>
+              <p className="text-warn">Kein Tankpreis verfügbar – prüfe die Einstellungen (PLZ, Preis).</p>
             ) : preview ? (
               <div className="space-y-1">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-zinc-400">
+                  <span className="text-muted">
                     <Fuel className="mr-1 inline h-3.5 w-3.5" />
                     {preview.parts.map((part) => `${part.label} ${kmLabel(part.km)}`).join(" · ")} ·{" "}
                     {pricePerLiter(price)}/l
                   </span>
-                  <span className="font-semibold text-zinc-100">{eur(preview.total)}</span>
+                  <span className="font-semibold text-ink">{eur(preview.total)}</span>
                 </div>
-                <div className="flex items-baseline justify-between gap-3 text-xs text-zinc-500">
+                <div className="flex items-baseline justify-between gap-3 text-xs text-muted">
                   <span>{preview.occupants} Insassen · Sprit durch alle geteilt</span>
                   <span>
-                    je <span className="font-medium text-emerald-400">{eur(preview.share)}</span>
+                    je <span className="font-medium text-accent">{eur(preview.share)}</span>
                   </span>
                 </div>
               </div>
             ) : (
-              <p className="text-zinc-500">Ort wählen oder Kilometer eintragen – die Kosten kommen automatisch.</p>
+              <p className="text-muted">Ort wählen oder Kilometer eintragen – die Kosten kommen automatisch.</p>
             )}
           </div>
         </form>
