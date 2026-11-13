@@ -33,7 +33,7 @@ export function FilterMenu({
         className={
           "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors " +
           (active
-            ? "bg-accent/20 text-accent ring-1 ring-accent/40"
+            ? "bg-accent-soft text-accent-ink"
             : "text-muted hover:bg-surface-2 hover:text-ink")
         }
       >

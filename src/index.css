@@ -34,6 +34,8 @@
   --color-success-soft: var(--success-soft);
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Serif nur für große Überschriften und Kennzahlen */
+  --font-display: var(--font-serif);
 }
 
 :root {
@@ -58,6 +60,8 @@
   --accent-soft: #e6f1eb;
   --accent-ink: #123a28;
   --on-accent: #ffffff;
+  /* Text auf gefüllter Pille (shell.css nutzt --on-accent-soft) */
+  --on-accent-soft: var(--accent-ink);
 
   /* Status */
   --danger: #b4453a;
@@ -394,3 +398,371 @@
 
 .toast-enter { animation: slideIn 0.3s ease-out forwards; }
 .toast-exit { animation: slideOut 0.3s ease-in forwards; }
+
+/* ==========================================================================
+   App-Shell nach der Portfolio-Vorlage (aus knowledge/design-system/shell.css).
+   Tokens kommen aus theme.css — hier stehen keine Hex-Werte.
+   ========================================================================== */
+
+@layer components {
+  .app {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+  }
+
+  .app-container {
+    width: 100%;
+    max-width: 1152px;
+    margin-inline: auto;
+    padding-inline: 20px;
+  }
+
+  .app-band {
+    background: var(--surface-2);
+    border-top: 1px solid var(--line);
+  }
+
+  .app-footer {
+    background: var(--surface-2);
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+    padding-block: 24px;
+  }
+
+  /* --- Kopfzeile ------------------------------------------------------- */
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: color-mix(in srgb, var(--bg) 85%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .app-header__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-block: 12px;
+  }
+
+  .app-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+  }
+
+  .app-brand__mark {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    border: 1px solid var(--line);
+    flex: none;
+  }
+
+  .app-brand__text {
+    font-family: var(--font-serif);
+    font-size: 15px;
+    line-height: 1.2;
+  }
+
+  .app-brand__sub {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .app-nav {
+    display: none;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .app-nav-item {
+    border: 0;
+    background: none;
+    cursor: pointer;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 14px;
+    color: var(--muted);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 140ms ease, background-color 140ms ease;
+  }
+
+  .app-nav-item:hover {
+    color: var(--ink);
+  }
+
+  .app-nav-item.is-active {
+    background: var(--accent-soft);
+    color: var(--on-accent-soft);
+  }
+
+  .app-iconbtn {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 140ms ease, border-color 140ms ease;
+  }
+
+  .app-iconbtn:hover {
+    color: var(--ink);
+    border-color: var(--line-strong);
+  }
+
+  .app-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Zusatzaktionen der Kopfzeile nur ab Tablet-Breite */
+  .app-actions--desktop {
+    display: none;
+  }
+
+  .app-mobile-toggle {
+    display: grid;
+  }
+
+  .app-mobile-nav {
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+    padding: 12px 20px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-mobile-nav button {
+    border: 0;
+    background: none;
+    text-align: left;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--muted);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .app-mobile-nav button:hover {
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+
+  .app-mobile-nav__item.is-active {
+    background: var(--accent-soft);
+    color: var(--on-accent-soft);
+  }
+
+  .app-mobile-nav__actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+
+  /* --- Seitenkopf ------------------------------------------------------ */
+  .app-hero {
+    padding-top: 48px;
+    padding-bottom: 16px;
+  }
+
+  .app-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .app-badge::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--accent);
+    flex: none;
+  }
+
+  .app-title {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+    font-size: 36px;
+    margin: 20px 0 0;
+  }
+
+  .app-lede {
+    margin-top: 16px;
+    max-width: 42rem;
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+
+  /* --- Kennzahlen ------------------------------------------------------ */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-top: 40px;
+    margin-bottom: 0;
+  }
+
+  .stat {
+    background: var(--surface);
+    padding: 20px;
+  }
+
+  .stat__value {
+    font-family: var(--font-serif);
+    font-size: 30px;
+    line-height: 1;
+  }
+
+  .stat__label {
+    margin-top: 6px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+  }
+
+  /* --- Sektionen, Karten ---------------------------------------------- */
+  .app-section {
+    padding-block: 64px;
+  }
+
+  .app-section__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .app-section__title {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: 30px;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+
+  .app-section__note {
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .app-grid {
+    display: grid;
+    gap: 16px;
+    margin-top: 32px;
+    align-items: start;
+  }
+
+  .app-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    transition: border-color 140ms ease;
+  }
+
+  .app-card--link {
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    text-align: left;
+    width: 100%;
+  }
+
+  .app-card--link:hover {
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  }
+
+  .app-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--accent);
+  }
+
+  .app-card__title {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: 20px;
+    margin: 16px 0 6px;
+  }
+
+  .app-card__text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+
+  .app-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+  }
+
+  /* --- Breakpoints ----------------------------------------------------- */
+  @media (min-width: 640px) {
+    .app-title { font-size: 48px; }
+    .app-section__title { font-size: 36px; }
+    .app-lede { font-size: 18px; }
+    .stat-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .app-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (min-width: 768px) {
+    .app-nav { display: flex; }
+    .app-actions--desktop { display: flex; }
+    .app-mobile-toggle { display: none; }
+  }
+
+  @media (min-width: 1024px) {
+    .app-grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+}

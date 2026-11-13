@@ -1,8 +1,8 @@
-import { AlertTriangle, Car, Cog, HandCoins, LogOut, Plus, Route, ShieldCheck, TrendingUp } from "lucide-react";
+import { AlertTriangle, Car, Cog, HandCoins, LogOut, Plus, Route, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { AppSettings, AppState, HomePlace, Person, Trip } from "./lib/calc.ts";
 import { ApiError, api, type TripPayload } from "./lib/api.ts";
-import { ageLabel, eur, pricePerLiter } from "./lib/format.ts";
+import { eur, pricePerLiter } from "./lib/format.ts";
 import { TripDialog } from "./components/TripDialog.tsx";
 import { TripList } from "./components/TripList.tsx";
 import { DebtMatrix } from "./components/DebtMatrix.tsx";
@@ -11,16 +11,31 @@ import { ConfirmDialog, type ConfirmState } from "./components/ConfirmDialog.tsx
 import { FilterMenu } from "./components/FilterMenu.tsx";
 import { AuthScreen } from "./pages/AuthScreen.tsx";
 import { AdminDialog } from "./pages/AdminDialog.tsx";
+import { OverviewPage } from "./pages/OverviewPage.tsx";
+import { AppShell, PageHead, type NavItem } from "./components/AppShell.tsx";
 import { Button } from "./components/ui.tsx";
 
-type Tab = "fahrten" | "zahlungen";
+type Tab = "uebersicht" | "fahrten" | "abrechnung";
+
+const NAV: NavItem[] = [
+  { id: "uebersicht", label: "Übersicht" },
+  { id: "fahrten", label: "Fahrten" },
+  { id: "abrechnung", label: "Abrechnung" },
+];
+
+const THEME_KEY = "mitfahr-theme";
+
+function readTheme(): "light" | "dark" {
+  if (typeof document === "undefined") return "light";
+  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+}
 
 export default function App() {
   const [state, setState] = useState<AppState | null>(null);
   const [guestPersons, setGuestPersons] = useState<Person[]>([]);
   const [authReady, setAuthReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("fahrten");
+  const [tab, setTab] = useState<Tab>("uebersicht");
   const [driverFilter, setDriverFilter] = useState<number | null>(null);
   const [passengerFilter, setPassengerFilter] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -30,6 +45,18 @@ export default function App() {
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">(readTheme);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      /* privater Modus: dann eben ohne Merken */
+    }
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", theme === "dark" ? "#0e1512" : "#f3f5f4");
+  }, [theme]);
 
   const notify = useCallback((message: string) => {
     setToast(message);
@@ -78,7 +105,7 @@ export default function App() {
 
   if (!authReady) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="app flex min-h-screen items-center justify-center">
         <p className="text-sm text-muted">Lädt…</p>
       </div>
     );
@@ -86,10 +113,10 @@ export default function App() {
 
   if (loadError && !state) {
     return (
-      <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 p-6 text-center">
+      <div className="app mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 p-6 text-center">
         <AlertTriangle className="h-8 w-8 text-warn" />
         <p className="text-sm text-muted">{loadError}</p>
-        <button onClick={() => void load()} className="rounded-xl bg-accent px-4 py-2 text-sm text-on-accent">
+        <button onClick={() => void load()} className="rounded-full bg-accent px-5 py-2.5 text-sm text-on-accent">
           Erneut laden
         </button>
       </div>
@@ -200,148 +227,154 @@ export default function App() {
     setState(null);
     setDriverFilter(null);
     setPassengerFilter(null);
+    setTab("uebersicht");
     await load();
   }
 
-  return (
-    <div className="mx-auto min-h-screen w-full max-w-2xl px-4 pb-16 pt-5">
-      <header className="mb-4 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-xl font-semibold text-ink">
-            <Car className="h-5 w-5 text-accent" />
-            MitFahr.io
-          </h1>
-          <p className="mt-0.5 truncate text-xs text-muted">
-            {me ? `${me.firstName} ${me.lastName}${me.isAdmin ? " · Admin" : ""}` : "Fahrgemeinschaft abrechnen"}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          {me?.isAdmin && (
-            <button
-              onClick={() => setAdminOpen(true)}
-              aria-label="Admin-Dashboard"
-              title="Admin-Dashboard"
-              className="rounded-xl border border-line bg-surface p-2.5 text-accent hover:border-accent hover:text-accent"
-            >
-              <ShieldCheck className="h-5 w-5" />
-            </button>
-          )}
-          <button
-            onClick={() => setSettingsOpen(true)}
-            aria-label="Einstellungen"
-            className="rounded-xl border border-line bg-surface p-2.5 text-muted hover:border-line-strong hover:text-ink"
-          >
-            <Cog className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => void logout()}
-            aria-label="Abmelden"
-            title="Abmelden"
-            className="rounded-xl border border-line bg-surface p-2.5 text-muted hover:border-line-strong hover:text-danger"
-          >
-            <LogOut className="h-5 w-5" />
-          </button>
-        </div>
-      </header>
-
+  const headerActions = (
+    <>
+      {me?.isAdmin && (
+        <button
+          onClick={() => setAdminOpen(true)}
+          aria-label="Admin-Dashboard"
+          title="Admin-Dashboard"
+          className="app-iconbtn"
+        >
+          <ShieldCheck className="h-[18px] w-[18px]" />
+        </button>
+      )}
       <button
         onClick={() => setSettingsOpen(true)}
-        className="mb-4 flex w-full items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-left hover:border-line-strong"
+        aria-label="Einstellungen"
+        title="Einstellungen"
+        className="app-iconbtn"
       >
-        <div className="flex items-center gap-2 text-sm">
-          <TrendingUp className="h-4 w-4 text-accent" />
-          <span className="font-medium text-ink">
-            {fuelPrice.price ? `${pricePerLiter(fuelPrice.price)}/l` : "kein Tankpreis"}
-          </span>
-          <span className="text-muted">{fuelPrice.fuelLabel}</span>
-        </div>
-        <span className="text-xs text-muted">
-          {fuelPrice.source === "manual"
-            ? "manuell"
-            : fuelPrice.stale
-              ? "veraltet"
-              : ageLabel(fuelPrice.fetchedAt) || "PLZ prüfen"}
-        </span>
+        <Cog className="h-[18px] w-[18px]" />
       </button>
-
-      <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-surface p-1">
-        <button
-          onClick={() => setTab("fahrten")}
-          className={
-            "flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors " +
-            (tab === "fahrten" ? "bg-accent text-on-accent" : "text-muted hover:text-ink")
-          }
-        >
-          <Route className="h-4 w-4" />
-          Fahrten
-          <span className="text-xs opacity-70">{trips.length}</span>
+      {me ? (
+        <button onClick={() => void logout()} aria-label="Abmelden" title="Abmelden" className="app-iconbtn">
+          <LogOut className="h-[18px] w-[18px]" />
         </button>
-        <button
-          onClick={() => setTab("zahlungen")}
-          className={
-            "flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors " +
-            (tab === "zahlungen" ? "bg-accent text-on-accent" : "text-muted hover:text-ink")
-          }
-        >
-          <HandCoins className="h-4 w-4" />
-          Zahlungen
-          {matrix.total > 0 && <span className="text-xs opacity-70">{eur(matrix.total)}</span>}
-        </button>
-      </div>
+      ) : null}
+    </>
+  );
 
-      {tab === "fahrten" ? (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-1 rounded-xl bg-surface p-1">
-              <FilterMenu label="Fahrer" options={driverOptions} value={driverFilter} onChange={setDriverFilter} />
-              <FilterMenu
-                label="Mitfahrer"
-                options={passengerOptions}
-                value={passengerFilter}
-                onChange={setPassengerFilter}
+  return (
+    <AppShell
+      name="MitFahr.io"
+      subtitle="Fahrten & Abrechnung"
+      mark={<Car className="h-5 w-5" />}
+      items={NAV}
+      active={tab}
+      onNavigate={(id) => setTab(id as Tab)}
+      theme={theme}
+      onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+      actions={headerActions}
+      footer={
+        <div className="app-container flex flex-wrap items-center justify-between gap-2">
+          <span>MitFahr.io · Fahrgemeinschaft abrechnen</span>
+          <span className="text-muted">
+            {me ? `${me.firstName} ${me.lastName}${me.isAdmin ? " · Admin" : ""}` : "Demo-Ansicht ohne Anmeldung"}
+          </span>
+        </div>
+      }
+    >
+      {tab === "uebersicht" && (
+        <OverviewPage
+          persons={persons}
+          trips={trips}
+          matrix={matrix}
+          fuelPrice={fuelPrice}
+          onNavigate={(id) => setTab(id as Tab)}
+          onNewTrip={() => setTripOpen(true)}
+          onOpenSettings={() => setSettingsOpen(true)}
+        />
+      )}
+
+      {tab === "fahrten" && (
+        <>
+          <PageHead
+            label="Fahrten"
+            title="Alle Fahrten"
+            intro="Jede Zeile ist eine Fahrt: wer gefahren ist, wer mitfuhr und was der Anteil pro Person kostet. Filter grenzen nach Fahrer und Mitfahrer ein."
+          >
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1 rounded-full border border-line bg-surface p-1">
+                <FilterMenu label="Fahrer" options={driverOptions} value={driverFilter} onChange={setDriverFilter} />
+                <FilterMenu
+                  label="Mitfahrer"
+                  options={passengerOptions}
+                  value={passengerFilter}
+                  onChange={setPassengerFilter}
+                />
+                {(driverFilter !== null || passengerFilter !== null) && (
+                  <button
+                    onClick={() => {
+                      setDriverFilter(null);
+                      setPassengerFilter(null);
+                    }}
+                    className="rounded-full px-3 py-1.5 text-xs text-muted hover:bg-surface-2 hover:text-ink"
+                  >
+                    zurücksetzen
+                  </button>
+                )}
+              </div>
+              <Button onClick={() => setTripOpen(true)} className="shrink-0 rounded-full px-5">
+                <Plus className="h-4 w-4" />
+                Fahrt eintragen
+              </Button>
+            </div>
+          </PageHead>
+
+          <section className="app-container pb-16">
+            {driverFilter === mePersonId && mePersonId !== null && (
+              <p className="mb-3 px-1 text-xs text-muted">Zeigt nur deine eigenen Fahrten als Fahrer.</p>
+            )}
+
+            {visibleTrips.length === 0 && trips.length > 0 && (driverFilter !== null || passengerFilter !== null) ? (
+              <div className="app-card">
+                <p className="app-card__text">Keine Fahrt passt zu diesen Filtern.</p>
+              </div>
+            ) : trips.length === 0 ? (
+              <div className="app-card">
+                <p className="app-card__text">Noch keine Fahrt eingetragen. Die erste Fahrt legt auch die Abrechnung an.</p>
+                <Button className="mt-4 rounded-full px-5 py-3" onClick={() => setTripOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  Erste Fahrt eintragen
+                </Button>
+              </div>
+            ) : (
+              <TripList
+                trips={visibleTrips}
+                onDelete={requestDeleteTrip}
+                canDelete={(trip) => Boolean(me?.isAdmin) || trip.driverId === mePersonId}
+                myPersonId={mePersonId}
               />
-              {(driverFilter !== null || passengerFilter !== null) && (
-                <button
-                  onClick={() => {
-                    setDriverFilter(null);
-                    setPassengerFilter(null);
-                  }}
-                  className="rounded-lg px-2 py-1.5 text-xs text-muted hover:bg-surface-2 hover:text-ink"
-                >
-                  zurücksetzen
-                </button>
-              )}
-            </div>
-            <Button onClick={() => setTripOpen(true)} className="shrink-0">
-              <Plus className="h-4 w-4" />
-              Fahrt
-            </Button>
-          </div>
+            )}
+          </section>
+        </>
+      )}
 
-          {driverFilter === mePersonId && mePersonId !== null && (
-            <p className="px-1 text-xs text-muted">Zeigt nur deine eigenen Fahrten als Fahrer.</p>
-          )}
-
-          {visibleTrips.length === 0 && trips.length > 0 && (driverFilter !== null || passengerFilter !== null) ? (
-            <div className="rounded-xl border border-line bg-surface p-5 text-sm text-muted">
-              Keine Fahrt passt zu diesen Filtern.
-            </div>
-          ) : (
-            <TripList
-              trips={visibleTrips}
-              onDelete={requestDeleteTrip}
-              canDelete={(trip) => Boolean(me?.isAdmin) || trip.driverId === mePersonId}
+      {tab === "abrechnung" && (
+        <>
+          <PageHead
+            label="Abrechnung"
+            title="Wer wem was schuldet"
+            intro={
+              matrix.total > 0
+                ? `Offen sind insgesamt ${eur(matrix.total)}. Häkchen bestätigen eine einzelne Zahlung, der Button je Spalte begleicht alle Beträge einer Person.`
+                : "Aktuell ist alles ausgeglichen – sobald jemand mitfährt, erscheinen hier die offenen Beträge."
+            }
+          />
+          <section className="app-container pb-16">
+            <DebtMatrix
+              matrix={matrix}
+              onSettle={requestSettle}
+              canSettle={(debtorId) => Boolean(me?.isAdmin) || debtorId === mePersonId}
               myPersonId={mePersonId}
             />
-          )}
-        </div>
-      ) : (
-        <DebtMatrix
-          matrix={matrix}
-          onSettle={requestSettle}
-          canSettle={(debtorId) => Boolean(me?.isAdmin) || debtorId === mePersonId}
-          myPersonId={mePersonId}
-        />
+          </section>
+        </>
       )}
 
       <TripDialog
@@ -385,11 +418,11 @@ export default function App() {
 
       {toast && (
         <div className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-4">
-          <div className="pointer-events-auto rounded-xl border border-line-strong bg-surface-2 px-4 py-2.5 text-sm text-ink shadow-[var(--shadow)]">
+          <div className="pointer-events-auto rounded-full border border-line-strong bg-surface px-4 py-2.5 text-sm text-ink shadow-[var(--shadow)]">
             {toast}
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

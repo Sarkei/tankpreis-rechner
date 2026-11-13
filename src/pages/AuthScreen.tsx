@@ -106,16 +106,18 @@ export function AuthScreen({
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-4 py-10">
-      <div className="mb-6 text-center">
-        <h1 className="flex items-center justify-center gap-2 text-2xl font-semibold text-ink">
-          <Car className="h-6 w-6 text-accent" />
+    <div className="app mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-4 py-10">
+      <div className="mb-6 flex flex-col items-center text-center">
+        <span className="app-brand__mark mb-3">
+          <Car className="h-5 w-5" />
+        </span>
+        <h1 className="app-title" style={{ fontSize: 28, margin: 0 }}>
           MitFahr.io
         </h1>
-        <p className="mt-1 text-sm text-muted">Fahrgemeinschaft abrechnen</p>
+        <p className="mt-2 text-sm text-muted">Fahrgemeinschaft abrechnen – Fahrten, Kosten, offene Beträge.</p>
       </div>
 
-      <div className="rounded-2xl border border-line bg-surface p-5">
+      <div className="app-card">
         {mode === "login" && (
           <form
             className="space-y-4"
