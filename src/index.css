@@ -66,8 +66,8 @@
   /* Status */
   --danger: #b4453a;
   --danger-soft: #fbecea;
-  --warn: #a8701c;
-  --warn-soft: #fbf2e3;
+  --warn: #8a5410;
+  --warn-soft: #f8eede;
   --success: #2f7d5a;
   --success-soft: #e6f1eb;
 
@@ -516,6 +516,7 @@
   .app-nav-item.is-active {
     background: var(--accent-soft);
     color: var(--on-accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
   }
 
   .app-iconbtn {
@@ -524,9 +525,9 @@
     width: 36px;
     height: 36px;
     border-radius: 999px;
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-strong);
     background: transparent;
-    color: var(--muted);
+    color: var(--ink);
     cursor: pointer;
     transition: color 140ms ease, border-color 140ms ease;
   }
