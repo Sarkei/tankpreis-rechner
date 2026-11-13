@@ -10,7 +10,7 @@
  * Sekunde, Ergebnisse 24 Stunden im Speicher.
  */
 
-const USER_AGENT = "MitFahr.io/2.0 (privates Projekt; Kontakt: nagraszust@gmail.com)";
+const USER_AGENT = "MitFahr.io/2.0 (self-hosted)";
 
 const PHOTON = "https://photon.komoot.io/api/";
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";

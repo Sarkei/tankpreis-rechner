@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { pool } from "./db.ts";
 import type { MeUser, AdminUserRow } from "../calc.ts";
 
-const ADMIN_EMAIL = (process.env.ADMIN_EMAIL ?? "nagraszust@gmail.com").trim().toLowerCase();
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL ?? "").trim().toLowerCase();
 const BCRYPT_ROUNDS = 12;
 
 export interface UserRow {

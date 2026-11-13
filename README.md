@@ -9,7 +9,7 @@ App automatisch von clever-tanken.de (Daten der MTS-K).
 - **Konten**: Registrierung mit Vorname, Nachname, E-Mail und Passwort (mind. 8 Zeichen,
   Großbuchstabe, Zahl, Sonderzeichen). Jedes Konto hängt an einer Person aus der
   Fahrten-Liste; eine bestehende Person kann bei der Registrierung übernommen werden.
-  `ADMIN_EMAIL` (Standard `nagraszust@gmail.com`) wird beim Registrieren automatisch Admin.
+  `ADMIN_EMAIL` wird beim Registrieren automatisch Admin.
 - **Fahrten**: Datum, Fahrer, Mitfahrer, Richtung (Hinfahrt / Rückfahrt / beides),
   Kilometer hin und zurück. Kosten je Fahrt = `km / 100 × Verbrauch × Tankpreis`,
   geteilt durch alle Insassen (Fahrer + Mitfahrer). Der Tankpreis wird beim
