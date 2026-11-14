@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mitfahr-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mitfahr_io
+      POSTGRES_USER: mitfahr
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mitfahr_secret_change_me}
+      TZ: Europe/Berlin
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mitfahr -d mitfahr_io"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  mitfahr-io:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mitfahr-io
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-22225}:3000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - TZ=Europe/Berlin
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=mitfahr_io
+      - POSTGRES_USER=mitfahr
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-mitfahr_secret_change_me}
+      - FUEL_PLZ=${FUEL_PLZ:-83278}
+      - FUEL_PRICE_TTL_HOURS=${FUEL_PRICE_TTL_HOURS:-6}
+      - DEFAULT_CONSUMPTION=${DEFAULT_CONSUMPTION:-8}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET fehlt – in .env setzen (openssl rand -hex 32)}
+      - COOKIE_SECURE=${COOKIE_SECURE:-1}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+      - cloudflare
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  postgres_data:
+
+networks:
+  internal:
+    driver: bridge
+  cloudflare:
+    external: true
+    name: cloudflare-tunnel-net
