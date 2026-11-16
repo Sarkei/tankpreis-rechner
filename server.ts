@@ -236,6 +236,18 @@ async function startServer() {
   );
 
   // Öffentlich: Namensliste für die Registrierung ("ich bin schon in der Liste")
+  // Demo-Zugang für die Portfolio-Seite (nur das feste Demo-Konto).
+  app.get(
+    "/api/auth/demo",
+    wrap(async (_req, res) => {
+      const user = await findUserByEmail("demo@example.com");
+      if (!user) throw new HttpError(404, "Demo ist nicht eingerichtet");
+      await markLogin(user.id);
+      setSessionCookie(res, signSession(user));
+      res.json({ ok: true });
+    })
+  );
+
   app.get(
     "/api/public/persons",
     wrap(async (_req, res) => {
