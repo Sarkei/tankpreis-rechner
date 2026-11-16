@@ -162,6 +162,22 @@ async function startServer() {
     })
   );
 
+  // Demo-Zugang für die Portfolio-Vorschau: nur über demo-*-Domains oder DEMO_LOGIN=1
+  app.post(
+    "/api/auth/demo",
+    wrap(async (req, res) => {
+      const host = String(req.headers.host ?? "").toLowerCase();
+      if (!host.startsWith("demo-") && !host.startsWith("demo.") && process.env.DEMO_LOGIN !== "1") {
+        throw new HttpError(404, "Demo ist nicht verfügbar");
+      }
+      const user = await findUserByEmail("demo@example.com");
+      if (!user) throw new HttpError(404, "Demo ist nicht eingerichtet");
+      if (!user.is_active) throw new HttpError(403, "Dieses Konto ist gesperrt");
+      setSessionCookie(res, signSession(user));
+      res.json({ state: await loadState(toMe(user)) });
+    })
+  );
+
   app.post(
     "/api/auth/logout",
     wrap(async (_req, res) => {
