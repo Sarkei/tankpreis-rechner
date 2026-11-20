@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { ArrowRight, ArrowUpRight, Cog, HandCoins, Plus, Route, Users } from "lucide-react";
 import type { FuelPriceState, Matrix, Person, Trip } from "../lib/calc.ts";
 import { ageLabel, dayLabel, eur, kmLabel, pricePerLiter } from "../lib/format.ts";
 import { Band, PageHead, StatRow } from "../components/AppShell.tsx";
+import { DetailSheet, StatButton, type DetailDef } from "../components/DetailSheet.tsx";
 import { Button } from "../components/ui.tsx";
 
 /** Startseite als Übersicht: Kennzahlen aus echten Daten, Kartenraster der Bereiche. */
@@ -22,6 +24,7 @@ export function OverviewPage({
   onNewTrip: () => void;
   onOpenSettings: () => void;
 }) {
+  const [detail, setDetail] = useState<DetailDef | null>(null);
   const passengerIds = new Set<number>();
   let totalKm = 0;
   for (const trip of trips) {
@@ -83,14 +86,92 @@ export function OverviewPage({
         title="Fahrten erfassen, Kosten gerecht teilen."
         intro="Kilometer, Verbrauch und aktueller Tankpreis ergeben den Anteil pro Person – die Übersicht zeigt, was zuletzt gefahren wurde und welche Beträge noch offen sind."
       >
-        <StatRow
-          items={[
-            { value: eur(matrix.total), label: "Offene Beträge" },
-            { value: String(trips.length), label: "Fahrten" },
-            { value: String(passengerIds.size), label: "Mitfahrer" },
-            { value: kmLabel(totalKm), label: "Gefahren insgesamt" },
-          ]}
-        />
+        <dl className="stat-row">
+          <StatButton
+            value={eur(matrix.total)}
+            label="Offene Beträge"
+            onClick={() =>
+              setDetail({
+                titel: "Offene Beträge",
+                einheit: "€",
+                hinweis: "Wer wem noch etwas schuldet, größte Beträge zuerst.",
+                hoeherBesser: false,
+                laden: async () =>
+                  matrix.drivers
+                    .flatMap((d) =>
+                      matrix.passengers.map((p) => ({
+                        label: `${p.name} → ${d.name}`,
+                        wert: Number(matrix.cells[`${d.id}:${p.id}`] ?? 0),
+                      })),
+                    )
+                    .filter((x) => x.wert > 0)
+                    .sort((a, b) => b.wert - a.wert),
+              })
+            }
+          />
+          <StatButton
+            value={String(trips.length)}
+            label="Fahrten"
+            onClick={() =>
+              setDetail({
+                titel: "Fahrten",
+                hinweis: "Kilometer pro Fahrt, neueste zuerst.",
+                hoeherBesser: true,
+                laden: async () =>
+                  [...trips]
+                    .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+                    .map((t) => ({
+                      label: `${t.date} · ${t.fromLabel ?? "?"} → ${t.toLabel ?? "?"}`,
+                      wert: t.km,
+                    })),
+              })
+            }
+          />
+          <StatButton
+            value={String(passengerIds.size)}
+            label="Mitfahrer"
+            onClick={() =>
+              setDetail({
+                titel: "Mitfahrer",
+                hinweis: "Wie oft jede Person mitgefahren ist.",
+                hoeherBesser: true,
+                laden: async () => {
+                  const zaehler = new Map<string, number>();
+                  for (const t of trips) {
+                    for (const p of t.passengers) {
+                      zaehler.set(p.name, (zaehler.get(p.name) ?? 0) + 1);
+                    }
+                  }
+                  return [...zaehler.entries()]
+                    .map(([name, n]) => ({ label: name, wert: n }))
+                    .sort((a, b) => b.wert - a.wert);
+                },
+              })
+            }
+          />
+          <StatButton
+            value={kmLabel(totalKm)}
+            label="Gefahren insgesamt"
+            onClick={() =>
+              setDetail({
+                titel: "Gefahrene Kilometer",
+                einheit: "km",
+                hinweis: "Kilometer pro Monat.",
+                hoeherBesser: true,
+                laden: async () => {
+                  const proMonat = new Map<string, number>();
+                  for (const t of trips) {
+                    const m = String(t.date).slice(0, 7);
+                    proMonat.set(m, (proMonat.get(m) ?? 0) + t.km);
+                  }
+                  return [...proMonat.entries()]
+                    .sort((a, b) => a[0].localeCompare(b[0]))
+                    .map(([m, km]) => ({ label: m, wert: Math.round(km * 10) / 10 }));
+                },
+              })
+            }
+          />
+        </dl>
       </PageHead>
 
       <section className="app-section app-container">
@@ -157,6 +238,8 @@ export function OverviewPage({
           </div>
         )}
       </Band>
+
+      {detail && <DetailSheet def={detail} onClose={() => setDetail(null)} />}
     </>
   );
 }
