@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { User, Lock, Camera, Car, CreditCard, Users } from "lucide-react";
-import { api } from "../lib/api.ts";
+import { apiCall, api } from "../lib/api.ts";
 import { useAuth } from "../lib/AuthContext.tsx";
 import { useToast } from "../lib/ToastContext.tsx";
 import { Card, Button, Input, Avatar, Badge } from "../components/ui/index.tsx";
@@ -38,7 +38,7 @@ export default function SettingsPage() {
     }
     setProfileLoading(true);
     try {
-      await api("/api/profile", {
+      await apiCall("/api/profile", {
         method: "PUT",
         body: JSON.stringify({
           firstName: profile.firstName,
@@ -66,7 +66,7 @@ export default function SettingsPage() {
     }
     setPasswordLoading(true);
     try {
-      await api("/api/auth/change-password", {
+      await apiCall("/api/auth/change-password", {
         method: "POST",
         body: JSON.stringify({
           currentPassword: passwords.currentPassword,
@@ -86,7 +86,7 @@ export default function SettingsPage() {
     try {
       const fd = new FormData();
       fd.append("avatar", file);
-      await api("/api/profile/avatar", { method: "POST", body: fd });
+      await apiCall("/api/profile/avatar", { method: "POST", body: fd });
       await refreshUser();
       success("Profilbild aktualisiert");
     } catch (err) { showError(err instanceof Error ? err.message : "Fehler"); }
@@ -100,7 +100,7 @@ export default function SettingsPage() {
       : [...currentRoles, role];
     if (newRoles.length === 0) { showError("Mindestens eine Rolle erforderlich"); return; }
     try {
-      await api("/api/profile/roles", {
+      await apiCall("/api/profile/roles", {
         method: "PUT",
         body: JSON.stringify({ roles: newRoles }),
       });
@@ -262,7 +262,7 @@ function AdminUsersCard() {
 
   async function loadUsers() {
     try {
-      const data = await api<AdminUserRow[]>("/api/admin/users");
+      const data = await apiCall<AdminUserRow[]>("/api/admin/users");
       setUsers(data);
     } catch (err) {
       showError(err instanceof Error ? err.message : "Benutzer konnten nicht geladen werden");
@@ -279,7 +279,7 @@ function AdminUsersCard() {
   async function requireNewPassword(id: number) {
     setBusyId(id);
     try {
-      await api(`/api/admin/users/${id}/require-password`, { method: "POST" });
+      await apiCall(`/api/admin/users/${id}/require-password`, { method: "POST" });
       setUsers((list) =>
         list.map((u) => (u.id === id ? { ...u, mustSetPassword: true } : u))
       );

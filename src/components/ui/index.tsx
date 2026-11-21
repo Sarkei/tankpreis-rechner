@@ -1,4 +1,5 @@
 import React, { type ReactNode, type ButtonHTMLAttributes, type InputHTMLAttributes } from "react";
+import { createPortal } from "react-dom";
 import { clsx } from "clsx";
 import { Loader2 } from "lucide-react";
 
@@ -193,7 +194,7 @@ export function Modal({
 }) {
   if (!isOpen) return null;
   const sizes = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" };
-  return (
+  const inhalt = (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -203,7 +204,7 @@ export function Modal({
         className={clsx(
           "relative bg-zinc-900 border border-zinc-800 rounded-2xl w-full shadow-2xl",
           sizes[size],
-          "max-h-[90vh] overflow-y-auto"
+          "max-h-[var(--vv-height,90vh)] overflow-y-auto"
         )}
       >
         <div className="flex items-center justify-between p-5 border-b border-zinc-800 sticky top-0 bg-zinc-900 z-10">
@@ -219,6 +220,9 @@ export function Modal({
       </div>
     </div>
   );
+
+  // Portal: haengt am <body>, damit der Dialog die Seite nicht verschiebt.
+  return typeof document === "undefined" ? inhalt : createPortal(inhalt, document.body);
 }
 
 // ─── Badge ───────────────────────────────────────────────────────────────────

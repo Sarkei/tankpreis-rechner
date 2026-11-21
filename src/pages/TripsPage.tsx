@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useState, useCallback } from "react";
 import { Plus, MapPin, Trash2, ChevronDown, ChevronUp, Users } from "lucide-react";
-import { api } from "../lib/api.ts";
+import { apiCall, api } from "../lib/api.ts";
 import { useToast } from "../lib/ToastContext.tsx";
 import { useAuth } from "../lib/AuthContext.tsx";
 import type { Trip, CarpoolGroup, GroupDriver } from "../types.ts";
@@ -27,7 +27,7 @@ export default function TripsPage() {
   const [expandedTripId, setExpandedTripId] = useState<number | null>(null);
 
   useEffect(() => {
-    api<CarpoolGroup[]>("/api/groups")
+    apiCall<CarpoolGroup[]>("/api/groups")
       .then((data) => setGroups(data.filter((g) => !g.isArchived)))
       .catch(console.error);
   }, []);
@@ -39,7 +39,7 @@ export default function TripsPage() {
     }
     Promise.all(
       groups.map(async (g) => {
-        const drivers = await api<GroupDriver[]>(`/api/groups/${g.id}/drivers`).catch(() => []);
+        const drivers = await apiCall<GroupDriver[]>(`/api/groups/${g.id}/drivers`).catch(() => []);
         return drivers.some((d) => d.id === user.id) ? g : null;
       })
     ).then((results) => {
@@ -56,7 +56,7 @@ export default function TripsPage() {
     try {
       const results = await Promise.all(
         groups.map(async (g) => {
-          const data = await api<{ trips: Trip[]; total: number }>(
+          const data = await apiCall<{ trips: Trip[]; total: number }>(
             `/api/groups/${g.id}/trips?limit=50`
           );
           return { group: g, trips: data.trips };
@@ -98,7 +98,7 @@ export default function TripsPage() {
   async function deleteTrip(tripId: number, groupId: number) {
     if (!confirm("Fahrt wirklich löschen? Die Schulden werden zurückgesetzt.")) return;
     try {
-      await api(`/api/groups/${groupId}/trips/${tripId}`, { method: "DELETE" });
+      await apiCall(`/api/groups/${groupId}/trips/${tripId}`, { method: "DELETE" });
       setGroupTrips((prev) =>
         prev.map((section) =>
           section.group.id === groupId
@@ -317,7 +317,7 @@ function PassengerTripsView() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api<typeof trips>("/api/my-trips")
+    apiCall<typeof trips>("/api/my-trips")
       .then(setTrips)
       .catch(console.error)
       .finally(() => setLoading(false));

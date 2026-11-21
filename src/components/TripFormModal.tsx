@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { api } from "../lib/api.ts";
+import { apiCall, api } from "../lib/api.ts";
 import { useToast } from "../lib/ToastContext.tsx";
 import type { Trip, CarpoolGroup, Vehicle, GroupDriver } from "../types.ts";
 import {
@@ -94,7 +94,7 @@ export function TripFormModal({
     fuelDefault: string | null,
     keepExistingFuel = false
   ) {
-    const vs = await api<Vehicle[]>(`/api/groups/${group.id}/drivers/${driverId}/vehicles`);
+    const vs = await apiCall<Vehicle[]>(`/api/groups/${group.id}/drivers/${driverId}/vehicles`);
     setVehicles(vs);
     const defaultV = vs.find((v) => v.isDefault) ?? vs[0];
     const fuelPrice =
@@ -114,8 +114,8 @@ export function TripFormModal({
   useEffect(() => {
     setInitialized(false);
     Promise.all([
-      api<GroupDriver[]>(`/api/groups/${group.id}/drivers`),
-      api<CarpoolGroup>(`/api/groups/${group.id}`),
+      apiCall<GroupDriver[]>(`/api/groups/${group.id}/drivers`),
+      apiCall<CarpoolGroup>(`/api/groups/${group.id}`),
     ]).then(async ([dr, g]) => {
       setDrivers(dr);
       setGroupDefaults({
@@ -201,7 +201,7 @@ export function TripFormModal({
       outboundPassengerIds: p.outboundPassengerIds.filter((x) => x !== id),
       returnPassengerIds: p.returnPassengerIds.filter((x) => x !== id),
     }));
-    const g = await api<CarpoolGroup>(`/api/groups/${group.id}`);
+    const g = await apiCall<CarpoolGroup>(`/api/groups/${group.id}`);
     updatePassengerList(g, id);
     const fuelDefault =
       groupDefaults.defaultFuelPrice != null
@@ -225,7 +225,7 @@ export function TripFormModal({
       const retPassengers = f.returnEnabled ? (f.samePassengers ? f.outboundPassengerIds : f.returnPassengerIds) : [];
       setPreviewLoading(true);
       try {
-        const data = await api<CostPreview>("/api/trips/preview", {
+        const data = await apiCall<CostPreview>("/api/trips/preview", {
           method: "POST",
           body: JSON.stringify({
             groupId: group.id,
@@ -267,12 +267,12 @@ export function TripFormModal({
     };
     try {
       if (editTrip) {
-        await api(`/api/groups/${group.id}/trips/${editTrip.id}`, {
+        await apiCall(`/api/groups/${group.id}/trips/${editTrip.id}`, {
           method: "PUT",
           body: JSON.stringify(body),
         });
       } else {
-        await api(`/api/groups/${group.id}/trips`, {
+        await apiCall(`/api/groups/${group.id}/trips`, {
           method: "POST",
           body: JSON.stringify(body),
         });

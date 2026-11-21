@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
-import { api } from "../lib/api.ts";
+import { apiCall, api } from "../lib/api.ts";
 import { Card, SkeletonCard } from "./ui/index.tsx";
 import { clsx } from "clsx";
 import TripDetailModal from "./TripDetailModal.tsx";
@@ -41,7 +42,7 @@ export default function TripCalendar() {
 
   useEffect(() => {
     setLoading(true);
-    api<{ trips: CalendarTrip[] }>(`/api/calendar?year=${year}&month=${month}`)
+    apiCall<{ trips: CalendarTrip[] }>(`/api/calendar?year=${year}&month=${month}`)
       .then((data) => setTrips(data.trips))
       .catch(() => setTrips([]))
       .finally(() => setLoading(false));
@@ -95,7 +96,7 @@ export default function TripCalendar() {
   }
 
   function reloadCalendar() {
-    api<{ trips: CalendarTrip[] }>(`/api/calendar?year=${year}&month=${month}`)
+    apiCall<{ trips: CalendarTrip[] }>(`/api/calendar?year=${year}&month=${month}`)
       .then((data) => setTrips(data.trips))
       .catch(() => {});
   }
@@ -201,7 +202,7 @@ export default function TripCalendar() {
         )}
       </Card>
 
-      {selectedDay && dayTripsForPicker.length > 1 && (
+      {selectedDay && dayTripsForPicker.length > 1 && createPortal(
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60">
           <Card className="w-full max-w-sm space-y-3">
             <p className="font-medium text-zinc-200">
@@ -232,7 +233,8 @@ export default function TripCalendar() {
               Schließen
             </button>
           </Card>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {selectedTrip && (

@@ -45,6 +45,14 @@ export interface TripPayload {
   note?: string | null;
 }
 
+/** Direkter Aufruf eines beliebigen Endpunkts (fuer Routen ohne eigene Methode im api-Objekt). */
+export function apiCall<T = unknown>(
+  path: string,
+  init: { method?: string; body?: unknown } = {},
+): Promise<T> {
+  return request<T>(path, init);
+}
+
 export const api = {
   state: () => request<AppState>("/api/state"),
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { CreditCard, Check, X, Plus, Download } from "lucide-react";
-import { api } from "../lib/api.ts";
+import { apiCall, api } from "../lib/api.ts";
 import { useToast } from "../lib/ToastContext.tsx";
 import { useAuth } from "../lib/AuthContext.tsx";
 import type { Debt, Payment, CarpoolGroup } from "../types.ts";
@@ -29,8 +29,8 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     Promise.all([
-      api<Debt[]>("/api/debts"),
-      api<CarpoolGroup[]>("/api/groups"),
+      apiCall<Debt[]>("/api/debts"),
+      apiCall<CarpoolGroup[]>("/api/groups"),
     ]).then(([d, g]) => {
       setDebts(d);
       const active = g.filter((x) => !x.isArchived);
@@ -41,14 +41,14 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     if (!selectedGroupId) return;
-    api<Payment[]>(`/api/groups/${selectedGroupId}/payments`)
+    apiCall<Payment[]>(`/api/groups/${selectedGroupId}/payments`)
       .then(setPayments)
       .catch(console.error);
   }, [selectedGroupId]);
 
   async function confirmPayment(paymentId: number) {
     try {
-      await api(`/api/payments/${paymentId}/confirm`, { method: "POST" });
+      await apiCall(`/api/payments/${paymentId}/confirm`, { method: "POST" });
       setPayments((prev) => prev.map((p) => p.id === paymentId ? { ...p, status: "BESTAETIGT" } : p));
       success("Zahlung bestätigt");
       refreshDebts();
@@ -57,7 +57,7 @@ export default function PaymentsPage() {
 
   async function rejectPayment(paymentId: number) {
     try {
-      await api(`/api/payments/${paymentId}/reject`, { method: "POST" });
+      await apiCall(`/api/payments/${paymentId}/reject`, { method: "POST" });
       setPayments((prev) => prev.map((p) => p.id === paymentId ? { ...p, status: "OFFEN", reportedAt: null } : p));
       success("Zahlung abgelehnt");
       refreshDebts();
@@ -65,7 +65,7 @@ export default function PaymentsPage() {
   }
 
   async function refreshDebts() {
-    const d = await api<Debt[]>("/api/debts");
+    const d = await apiCall<Debt[]>("/api/debts");
     setDebts(d);
   }
 
@@ -230,7 +230,7 @@ export default function PaymentsPage() {
             setShowRecordModal(null);
             success("Zahlung erfasst!");
             refreshDebts();
-            api<Payment[]>(`/api/groups/${selectedGroupId}/payments`).then(setPayments);
+            apiCall<Payment[]>(`/api/groups/${selectedGroupId}/payments`).then(setPayments);
           }}
         />
       )}
@@ -257,7 +257,7 @@ function RecordPaymentModal({ groupId, debtors, onClose, onRecorded }: {
     if (!payerId || !amount) { showError("Zahler und Betrag erforderlich"); return; }
     setLoading(true);
     try {
-      await api(`/api/groups/${groupId}/payments/record`, {
+      await apiCall(`/api/groups/${groupId}/payments/record`, {
         method: "POST",
         body: JSON.stringify({ payerId: parseInt(payerId), amount: parseFloat(amount), note: note || undefined }),
       });

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Check } from "lucide-react";
-import { api } from "../lib/api.ts";
+import { apiCall, api } from "../lib/api.ts";
 import { useToast } from "../lib/ToastContext.tsx";
 import type { Debt } from "../types.ts";
 import { Card, Button, Avatar, formatEuro } from "./ui/index.tsx";
@@ -21,7 +21,7 @@ export default function DebtPayCard({
   async function handleQuickSettle() {
     setSettling(true);
     try {
-      await api(`/api/groups/${debt.groupId}/payments/report`, {
+      await apiCall(`/api/groups/${debt.groupId}/payments/report`, {
         method: "POST",
         body: JSON.stringify({
           receiverId: debt.creditor.id,

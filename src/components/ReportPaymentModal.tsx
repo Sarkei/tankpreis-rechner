@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { api } from "../lib/api.ts";
+import { apiCall, api } from "../lib/api.ts";
 import { useToast } from "../lib/ToastContext.tsx";
 import type { Debt } from "../types.ts";
 import { Modal, Button, Input, Textarea, formatEuro } from "./ui/index.tsx";
@@ -22,7 +22,7 @@ export default function ReportPaymentModal({
     e.preventDefault();
     setLoading(true);
     try {
-      await api(`/api/groups/${debt.groupId}/payments/report`, {
+      await apiCall(`/api/groups/${debt.groupId}/payments/report`, {
         method: "POST",
         body: JSON.stringify({
           receiverId: debt.creditor.id,

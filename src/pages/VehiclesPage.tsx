@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Car, Fuel, Star, Pencil, Trash2, Droplets } from "lucide-react";
-import { api } from "../lib/api.ts";
+import { apiCall, api } from "../lib/api.ts";
 import { useToast } from "../lib/ToastContext.tsx";
 import type { Vehicle } from "../types.ts";
 import { getFuelPriceStatus } from "../types.ts";
@@ -41,7 +41,7 @@ export default function VehiclesPage() {
 
   async function loadVehicles() {
     try {
-      const data = await api<Vehicle[]>("/api/vehicles");
+      const data = await apiCall<Vehicle[]>("/api/vehicles");
       setVehicles(data);
     } catch (err) {
       showError("Fahrzeuge konnten nicht geladen werden");
@@ -53,7 +53,7 @@ export default function VehiclesPage() {
   async function loadFuelLogs(vehicleId: number) {
     setFuelLogLoading(true);
     try {
-      const data = await api<typeof fuelLogs>(`/api/vehicles/${vehicleId}/fuel-logs`);
+      const data = await apiCall<typeof fuelLogs>(`/api/vehicles/${vehicleId}/fuel-logs`);
       setFuelLogs(data);
     } catch {}
     setFuelLogLoading(false);
@@ -65,7 +65,7 @@ export default function VehiclesPage() {
       return;
     }
     try {
-      await api(`/api/vehicles/${vehicleId}/fuel-logs`, {
+      await apiCall(`/api/vehicles/${vehicleId}/fuel-logs`, {
         method: "POST",
         body: JSON.stringify({
           date: fuelForm.date,
@@ -87,7 +87,7 @@ export default function VehiclesPage() {
   async function deleteVehicle(id: number) {
     setDeletingId(id);
     try {
-      await api(`/api/vehicles/${id}`, { method: "DELETE" });
+      await apiCall(`/api/vehicles/${id}`, { method: "DELETE" });
       setVehicles((prev) => prev.filter((v) => v.id !== id));
       success("Fahrzeug gelöscht");
     } catch (err) {
@@ -105,7 +105,7 @@ export default function VehiclesPage() {
           <Button variant="secondary" size="sm" icon={<Fuel className="w-3.5 h-3.5" />}
             onClick={async () => {
               try {
-                const r = await api<{ message: string }>("/api/fuel-prices/refresh", { method: "POST" });
+                const r = await apiCall<{ message: string }>("/api/fuel-prices/refresh", { method: "POST" });
                 success(r.message);
                 loadVehicles();
               } catch (err) { showError(err instanceof Error ? err.message : "Fehler"); }
@@ -328,7 +328,7 @@ function VehicleFormModal({
       };
       const url = vehicle ? `/api/vehicles/${vehicle.id}` : "/api/vehicles";
       const method = vehicle ? "PUT" : "POST";
-      const saved = await api<Vehicle>(url, { method, body: JSON.stringify(payload) });
+      const saved = await apiCall<Vehicle>(url, { method, body: JSON.stringify(payload) });
       onSaved(saved);
     } catch (err) {
       showError(err instanceof Error ? err.message : "Fehler");

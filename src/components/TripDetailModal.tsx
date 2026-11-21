@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { MapPin, Pencil } from "lucide-react";
-import { api } from "../lib/api.ts";
+import { apiCall, api } from "../lib/api.ts";
 import { useAuth } from "../lib/AuthContext.tsx";
 import { useToast } from "../lib/ToastContext.tsx";
 import type { Trip, CarpoolGroup } from "../types.ts";
@@ -32,10 +32,10 @@ export default function TripDetailModal({
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      api<Trip & { groupId: number; groupName?: string; vehicleId?: number | null }>(
+      apiCall<Trip & { groupId: number; groupName?: string; vehicleId?: number | null }>(
         `/api/groups/${groupId}/trips/${tripId}`
       ),
-      api<CarpoolGroup>(`/api/groups/${groupId}`),
+      apiCall<CarpoolGroup>(`/api/groups/${groupId}`),
     ])
       .then(([t, g]) => { setTrip({ ...t, groupId }); setGroup(g); })
       .catch(() => showError("Fahrt konnte nicht geladen werden"))

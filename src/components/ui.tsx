@@ -1,6 +1,7 @@
 import { clsx } from "clsx";
 import { X } from "lucide-react";
 import { useEffect, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "success";
 
@@ -69,7 +70,7 @@ export function Modal({
 
   if (!open) return null;
 
-  return (
+  const inhalt = (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4">
       <div
         className="absolute inset-0"
@@ -99,6 +100,9 @@ export function Modal({
       </div>
     </div>
   );
+
+  // Portal: haengt am <body>, damit der Dialog die Seite nicht verschiebt.
+  return typeof document === "undefined" ? inhalt : createPortal(inhalt, document.body);
 }
 
 export function Segmented<T extends string>({

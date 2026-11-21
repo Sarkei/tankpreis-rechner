@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { BarChart3 } from "lucide-react";
-import { api } from "../lib/api.ts";
+import { apiCall, api } from "../lib/api.ts";
 import { useAuth } from "../lib/AuthContext.tsx";
 import type { CarpoolGroup } from "../types.ts";
 import { Card, SkeletonCard, EmptyState, formatEuro } from "../components/ui/index.tsx";
@@ -199,7 +199,7 @@ export default function StatsPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api<CarpoolGroup[]>("/api/groups")
+    apiCall<CarpoolGroup[]>("/api/groups")
       .then((data) => {
         const active = data.filter((g) => !g.isArchived);
         setGroups(active);
@@ -211,7 +211,7 @@ export default function StatsPage() {
   useEffect(() => {
     if (!selectedGroupId) return;
     setLoading(true);
-    api<Stats>(`/api/groups/${selectedGroupId}/stats`)
+    apiCall<Stats>(`/api/groups/${selectedGroupId}/stats`)
       .then(setStats)
       .catch(console.error)
       .finally(() => setLoading(false));

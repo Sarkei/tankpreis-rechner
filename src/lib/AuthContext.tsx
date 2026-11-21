@@ -6,7 +6,7 @@ import React, {
   useCallback,
   type ReactNode,
 } from "react";
-import { api, setToken, clearToken, getToken } from "./api.ts";
+import { apiCall, api, setToken, clearToken, getToken } from "./api.ts";
 import type { User } from "../types.ts";
 
 interface AuthContextValue {
@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      const data = await api<User>("/api/auth/me");
+      const data = await apiCall<User>("/api/auth/me");
       setUser(data);
     } catch {
       clearToken();
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string, rememberMe = false) => {
-      const res = await api<{ token: string; user: User; passwordWasSet?: boolean }>(
+      const res = await apiCall<{ token: string; user: User; passwordWasSet?: boolean }>(
         "/api/auth/login",
         {
           method: "POST",
@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       iban?: string;
       fuelPricePlz?: string;
     }) => {
-      const res = await api<{ token: string; user: User }>(
+      const res = await apiCall<{ token: string; user: User }>(
         "/api/auth/register",
         {
           method: "POST",
