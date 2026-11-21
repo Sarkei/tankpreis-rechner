@@ -1,6 +1,6 @@
 import type { Express, Response } from "express";
 import type { Pool, PoolClient } from "pg";
-import type { AuthRequest } from "../../../server.js";
+import type { AuthRequest } from "./auth.js";
 import { createNotification } from "./notificationHelpers.js";
 import { isGroupDriver, addTripDebt, netBilateralDebtsIfDrivers } from "./groupHelpers.js";
 import { computeTripFuelCost } from "../tripCost.js";

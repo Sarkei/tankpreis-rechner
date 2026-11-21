@@ -27,6 +27,28 @@ export interface SessionPayload {
 
 export interface AuthRequest extends Request {
   user?: UserRow;
+  /**
+   * Kennung des angemeldeten Nutzers als Zahl.
+   *
+   * Die Route-Module (Gruppen, Fahrten, Zahlungen ...) arbeiten mit `req.userId`.
+   * Statt sie alle umzuschreiben, liefert dieser Getter denselben Wert aus `req.user`.
+   * Der Getter wird von `attachUserId()` einmalig an jede Anfrage gehaengt; damit
+   * bleibt `req.userId` ein normaler Wert und keine Funktion im JSON.
+   */
+  userId?: number;
+}
+
+/**
+ * Setzt `req.userId` aus `req.user`. Muss nach der Authentifizierung laufen.
+ * Kurz und ohne Seiteneffekte, damit es in jeder Route billig ist.
+ */
+export function withUserId(
+  req: AuthRequest,
+  _res: Response,
+  next: () => void,
+): void {
+  if (req.user) req.userId = Number(req.user.id);
+  next();
 }
 
 function parseCookies(header: string | undefined): Record<string, string> {
@@ -104,6 +126,8 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
     res.status(401).json({ error: "Bitte anmelden" });
     return;
   }
+  // Die Route-Module arbeiten mit req.userId - hier einmal zentral setzen.
+  req.userId = Number(req.user.id);
   next();
 }
 

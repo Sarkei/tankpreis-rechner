@@ -1,5 +1,34 @@
 import type { AdminUserRow, AppState, Person } from "./calc.ts";
 
+/**
+ * Sitzungs-Token im Browser.
+ *
+ * Der Server setzt zusaetzlich ein HttpOnly-Cookie; das Token hier ist der
+ * Rueckfall fuer Umgebungen ohne Cookie-Zugriff und fuer den Authorization-Header.
+ */
+const TOKEN_KEY = "mitfahr_token";
+
+export function getToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setToken(token: string | null | undefined): void {
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // Speicher voll oder gesperrt - die Sitzung laeuft dann nur ueber das Cookie.
+  }
+}
+
+export function clearToken(): void {
+  setToken(null);
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -10,9 +39,14 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (init.body !== undefined) headers["Content-Type"] = "application/json";
+  if (token) headers.Authorization = `Bearer ${token}`;
+
   const res = await fetch(path, {
     method: init.method ?? "GET",
-    headers: init.body === undefined ? undefined : { "Content-Type": "application/json" },
+    headers: Object.keys(headers).length > 0 ? headers : undefined,
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
   });
 

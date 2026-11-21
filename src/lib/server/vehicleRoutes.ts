@@ -1,6 +1,6 @@
 import type { Express, Response } from "express";
 import type { Pool } from "pg";
-import type { AuthRequest } from "../../../server.js";
+import type { AuthRequest } from "./auth.js";
 
 export function registerVehicleRoutes(
   app: Express,

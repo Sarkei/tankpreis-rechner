@@ -268,6 +268,7 @@ async function startServer() {
   // Ab hier ist alles geschützt
   app.use("/api", requireAuth);
 
+
   // ── Eigenes Konto ─────────────────────────────────────────────────────────
   app.put(
     "/api/me/home",
