@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { starteSichtbareHoehe } from './lib/vvHeight';
 
 /**
  * Demo-Domains (demo-*) öffnen sich mit dem Beispielkonto, ohne Registrierung.
@@ -19,6 +20,9 @@ async function bootstrapDemo(): Promise<void> {
   }
 }
 
+
+// Sichtbare Hoehe als CSS-Variable (Tastatur auf dem Handy).
+starteSichtbareHoehe();
 const root = createRoot(document.getElementById("root")!);
 
 void bootstrapDemo().finally(() => {

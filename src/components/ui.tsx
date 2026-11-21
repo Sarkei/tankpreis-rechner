@@ -80,7 +80,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         className={
-          "relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-line bg-surface p-5 shadow-[var(--shadow)] sm:rounded-2xl " +
+          "relative max-h-[var(--vv-height,92vh)] w-full overflow-y-auto rounded-t-2xl border border-line bg-surface p-5 shadow-[var(--shadow)] sm:rounded-2xl " +
           (size === "wide" ? "sm:max-w-3xl" : "sm:max-w-md")
         }
       >
