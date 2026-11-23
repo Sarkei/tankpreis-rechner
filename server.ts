@@ -38,6 +38,7 @@ import {
   verifyResetCode,
 } from "./src/lib/server/users.ts";
 import { pushoverRouter } from "./server/pushover-route";
+import { pushRouter } from "./server/push-route";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3000);
@@ -268,7 +269,13 @@ async function startServer() {
  * Die Nutzerkennung ist hier die Person-ID.
  */
 app.use(
-  "/api/integrations/pushover",
+  app.use(
+  "/api/push",
+  requireAuth,
+  pushRouter(pool as never, (req) => (req as { user?: { person_id?: number } }).user?.person_id ?? null, "MitFahr.io"),
+);
+
+"/api/integrations/pushover",
   requireAuth,
   pushoverRouter(pool as never, (req) => {
     const r = req as { user?: { person_id?: number } };
