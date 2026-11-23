@@ -38,7 +38,7 @@ import {
   verifyResetCode,
 } from "./src/lib/server/users.ts";
 import { pushoverRouter } from "./server/pushover-route";
-import { pushRouter } from "./server/push-route";
+import { pushRouter, sendePushAnNutzer } from "./server/push-route";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3000);
@@ -264,29 +264,34 @@ async function startServer() {
   );
 
   // Ab hier ist alles geschützt
+
   /*
- * Pushover: Zugang hinterlegen, testen, trennen.
- * Die Nutzerkennung ist hier die Person-ID.
- */
-app.use(
+   * Pushover: Zugang hinterlegen, testen, trennen.
+   * Die Nutzerkennung ist hier die Person-ID.
+   */
   app.use(
-  "/api/push",
-  requireAuth,
-  pushRouter(pool as never, (req) => (req as { user?: { person_id?: number } }).user?.person_id ?? null, "MitFahr.io"),
-);
+    "/api/integrations/pushover",
+    requireAuth,
+    pushoverRouter(pool as never, (req) => {
+      const r = req as { user?: { person_id?: number } };
+      return r.user?.person_id ?? null;
+    }, {
+      titel: "MitFahr.io",
+      text: "Wenn du das siehst, funktionieren deine Benachrichtigungen.",
+    }),
+  );
 
-"/api/integrations/pushover",
-  requireAuth,
-  pushoverRouter(pool as never, (req) => {
-    const r = req as { user?: { person_id?: number } };
-    return r.user?.person_id ?? null;
-  }, {
-    titel: "MitFahr.io",
-    text: "Wenn du das siehst, funktionieren deine Benachrichtigungen.",
-  }),
-);
+  /*
+   * Web Push: Gerät anmelden, abmelden, testen.
+   * Läuft parallel zu Pushover.
+   */
+  app.use(
+    "/api/push",
+    requireAuth,
+    pushRouter(pool as never, (req) => (req as { user?: { person_id?: number } }).user?.person_id ?? null, "MitFahr.io"),
+  );
 
-app.use("/api", requireAuth);
+  app.use("/api", requireAuth);
 
   // ── Eigenes Konto ─────────────────────────────────────────────────────────
   app.put(
@@ -425,6 +430,29 @@ app.use("/api", requireAuth);
         throw err;
       } finally {
         client.release();
+      }
+
+      /*
+       * Mitfahrer benachrichtigen. Die Fahrt ist gespeichert, die Nachricht darf
+       * sie nicht mehr blockieren — deshalb ohne await.
+       */
+      for (const personId of passengerIds) {
+        try {
+          const nutzer = await pool.query<{ user_id: number | null }>(
+            "SELECT user_id FROM persons WHERE id = $1 LIMIT 1",
+            [personId],
+          );
+          const ziel = nutzer.rows[0]?.user_id;
+          if (!ziel) continue;
+          void sendePushAnNutzer(pool, ziel, {
+            titel: "Neue Fahrt eingetragen",
+            text: "Du bist als Mitfahrer eingetragen — schau in die Abrechnung.",
+            url: "https://tankpreis-rechner.nas-timgreen.com/",
+            tag: "neue-fahrt",
+          }).catch(() => undefined);
+        } catch {
+          /* einzelne Person darf das Speichern nicht blockieren */
+        }
       }
 
       res.status(201).json({ state: await loadState(req.user ? toMe(req.user) : null) });
