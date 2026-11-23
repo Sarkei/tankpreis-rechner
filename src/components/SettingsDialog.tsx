@@ -4,6 +4,7 @@ import type { AppSettings, FuelPriceState, HomePlace, MeUser } from "../lib/calc
 import { RouteField } from "./RouteField.tsx";
 import { ageLabel, pricePerLiter } from "../lib/format.ts";
 import { Button, Field, Modal, Segmented } from "./ui.tsx";
+import PushoverKarte from './PushoverKarte';
 
 const FUEL_OPTIONS: { value: AppSettings["fuelType"]; label: string }[] = [
   { value: "e10", label: "Super E10" },
@@ -233,6 +234,11 @@ export function SettingsDialog({
             onChange={(event) => setConsumption(event.target.value)}
           />
         </Field>
+      </div>
+
+      {/* Pushover: Benachrichtigungen aufs Handy */}
+      <div className="mt-4">
+        <PushoverKarte beschreibung="Pushover meldet dir neue Mitfahrgelegenheiten und Anfragen. Beide Werte stehen in deinem Pushover-Konto." />
       </div>
     </Modal>
   );

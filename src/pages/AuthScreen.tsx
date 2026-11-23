@@ -6,6 +6,9 @@ import { Button, Field } from "../components/ui.tsx";
 
 type Mode = "login" | "register" | "forgot";
 
+/** In der Demo gibt es keine Registrierung. */
+const isDemo = new URLSearchParams(window.location.search).has("demo");
+
 const BORDER_OK = "border-emerald-500 focus:border-emerald-500 ring-1 ring-emerald-500/30";
 const BORDER_BAD = "border-red-500 focus:border-red-500 ring-1 ring-red-500/30";
 
@@ -106,7 +109,7 @@ export function AuthScreen({
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-4 py-10">
+    <div className="auth-seite w-full max-w-md">
       <div className="mb-6 text-center">
         <h1 className="flex items-center justify-center gap-2 text-2xl font-semibold text-zinc-50">
           <Car className="h-6 w-6 text-blue-400" />
@@ -156,9 +159,9 @@ export function AuthScreen({
               {busy ? "Anmelden…" : "Anmelden"}
             </Button>
             <div className="flex items-center justify-between text-xs">
-              <button type="button" onClick={() => switchMode("register")} className="text-blue-400 hover:text-blue-300">
+              {!isDemo && <button type="button" onClick={() => switchMode("register")} className="text-blue-400 hover:text-blue-300">
                 Neues Konto anlegen
-              </button>
+              </button>}
               <button type="button" onClick={() => switchMode("forgot")} className="text-zinc-400 hover:text-zinc-200">
                 Passwort vergessen?
               </button>

@@ -37,6 +37,7 @@ import {
   toMe,
   verifyResetCode,
 } from "./src/lib/server/users.ts";
+import { pushoverRouter } from "./server/pushover-route";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3000);
@@ -262,7 +263,23 @@ async function startServer() {
   );
 
   // Ab hier ist alles geschützt
-  app.use("/api", requireAuth);
+  /*
+ * Pushover: Zugang hinterlegen, testen, trennen.
+ * Die Nutzerkennung ist hier die Person-ID.
+ */
+app.use(
+  "/api/integrations/pushover",
+  requireAuth,
+  pushoverRouter(pool as never, (req) => {
+    const r = req as { user?: { person_id?: number } };
+    return r.user?.person_id ?? null;
+  }, {
+    titel: "MitFahr.io",
+    text: "Wenn du das siehst, funktionieren deine Benachrichtigungen.",
+  }),
+);
+
+app.use("/api", requireAuth);
 
   // ── Eigenes Konto ─────────────────────────────────────────────────────────
   app.put(
