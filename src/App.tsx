@@ -11,14 +11,12 @@ import { ConfirmDialog, type ConfirmState } from "./components/ConfirmDialog.tsx
 import { FilterMenu } from "./components/FilterMenu.tsx";
 import { AuthScreen } from "./pages/AuthScreen.tsx";
 import { AdminDialog } from "./pages/AdminDialog.tsx";
-import { OverviewPage } from "./pages/OverviewPage.tsx";
 import { AppShell, PageHead, type NavItem } from "./components/AppShell.tsx";
 import { Button } from "./components/ui.tsx";
 
-type Tab = "uebersicht" | "fahrten" | "abrechnung";
+type Tab = "fahrten" | "abrechnung";
 
 const NAV: NavItem[] = [
-  { id: "uebersicht", label: "Übersicht" },
   { id: "fahrten", label: "Fahrten" },
   { id: "abrechnung", label: "Abrechnung" },
 ];
@@ -35,7 +33,7 @@ export default function App() {
   const [guestPersons, setGuestPersons] = useState<Person[]>([]);
   const [authReady, setAuthReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("uebersicht");
+  const [tab, setTab] = useState<Tab>("fahrten");
   const [driverFilter, setDriverFilter] = useState<number | null>(null);
   const [passengerFilter, setPassengerFilter] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -227,7 +225,7 @@ export default function App() {
     setState(null);
     setDriverFilter(null);
     setPassengerFilter(null);
-    setTab("uebersicht");
+    setTab("fahrten");
     await load();
   }
 
@@ -279,18 +277,6 @@ export default function App() {
         </div>
       }
     >
-      {tab === "uebersicht" && (
-        <OverviewPage
-          persons={persons}
-          trips={trips}
-          matrix={matrix}
-          fuelPrice={fuelPrice}
-          onNavigate={(id) => setTab(id as Tab)}
-          onNewTrip={() => setTripOpen(true)}
-          onOpenSettings={() => setSettingsOpen(true)}
-        />
-      )}
-
       {tab === "fahrten" && (
         <>
           <PageHead
