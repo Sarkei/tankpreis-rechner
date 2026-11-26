@@ -1,3 +1,8 @@
+/* === FARBEN AUS DEM KIT (knowledge/design-system/kit) === */
+@import './design/farben.css';
+/* Farben kommen ab hier aus knowledge/design-system/kit/paletten.json.
+   Das Gerüst (geruest.css) bleibt bewusst draußen — diese App hat eigene Komponenten. */
+
 @import "tailwindcss";
 
 @layer base {

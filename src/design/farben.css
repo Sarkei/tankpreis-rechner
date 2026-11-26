@@ -1,0 +1,108 @@
+/* ==========================================================================
+   farben.css — ERZEUGT aus kit/paletten.json. Nicht hier ändern!
+
+   App:        MitFahr
+   Charakter:  Stahl · Straße, neutral, sachlich
+   Dichte:     normal (Radius 10px)
+
+   Änderung: kit/paletten.json bearbeiten, dann
+       python3 kit/build.py mitfahr --nach <projektordner>
+   ========================================================================== */
+
+:root {
+  /* --- Akzent (Marke der App) ------------------------------------------ */
+  --accent: #93a7ae;
+  --accent-hover: #a8bbc1;
+  --accent-soft: rgb(147 167 174 / 0.15);
+  --accent-ink: #d3dee2;
+  --on-accent: #0a1012;
+
+  /* --- Status (in jeder App gleich, damit Warnungen nicht verwirren) --- */
+  --danger: #f08a7a;
+  --danger-soft: rgb(240 138 122 / 0.14);
+  --warn: #e8b25f;
+  --warn-soft: rgb(232 178 95 / 0.14);
+  --success: #63c79a;
+  --success-soft: rgb(99 199 154 / 0.14);
+
+  /* --- Form: Radius aus der Palette, Dichte aus dem Charakter ---------- */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  --karte-padding: 20px;
+  --sektion-abstand: 32px;
+  --hero-abstand: 40px;
+  --ziel-hoehe: 38px;
+  --titel-groesse: clamp(25px, 4vw, 34px);
+  --stat-groesse: 26px;
+  --raster-abstand: 14px;
+
+  /* --- Schrift --------------------------------------------------------- */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
+  --font-zahlen: ui-monospace, 'SF Mono', Menlo, monospace;
+
+  color-scheme: dark;
+}
+
+/* --- DUNKEL: Standard ------------------------------------------------
+   `.dark` ist mit aufgeführt, weil ältere Apps den Darkmode über eine Klasse am
+   <html>-Element schalten statt über data-theme. Ohne diesen Selektor bleiben sie im
+   hellen Standard hängen, obwohl sie dunkel wollen. */
+[data-theme='dark'],
+.dark,
+:root:not([data-theme='light']) {
+  --bg: #0d1416;
+  --surface: #152022;
+  --surface-2: #1c2729;
+  --surface-3: #243032;
+
+  --ink: #e9edeb;
+  --muted: #a4aaa7;
+  --placeholder: #9aa5a0;
+
+  --line: #2b2f2d;
+  --line-strong: #383c3a;
+
+  color-scheme: dark;
+}
+
+/* --- HELL ------------------------------------------------------------ */
+[data-theme='light'],
+.light:not(.dark) {
+  --bg: #f2f4f5;
+  --surface: #ffffff;
+  --surface-2: #e8eaeb;
+  --surface-3: #dee0e1;
+
+  --ink: #121a16;
+  --muted: #55635c;
+  --placeholder: #6b7873;
+
+  --line: #dde3df;
+  --line-strong: #c6cfc9;
+
+  --accent: #4b636b;
+  --accent-hover: #3d535a;
+  --accent-soft: #07090a;
+  --accent-ink: #1a2225;
+  --on-accent: #ffffff;
+
+  color-scheme: light;
+}
+
+/* --- Aliasse für vorhandene Komponenten ------------------------------ */
+:root {
+  --background: var(--bg);
+  --card-bg: var(--surface);
+  --card: var(--surface);
+  --panel: var(--surface);
+  --foreground: var(--ink);
+  --text: var(--ink);
+  --text-muted: var(--muted);
+  --border: var(--line);
+  --brand: var(--accent);
+  --primary: var(--accent);
+}

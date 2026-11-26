@@ -1,12 +1,12 @@
 {
-  "name": "MitFahr.io",
+  "name": "MitFahr",
   "short_name": "MitFahr",
+  "description": "MitFahr — eigene App.",
   "start_url": "/",
-  "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#111827",
-  "theme_color": "#111827",
+  "background_color": "#0e1211",
+  "theme_color": "#101312",
+  "lang": "de",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -25,6 +25,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
     }
-  ]
+  ],
+  "_hinweis": "Akzent dieser App: #93a7ae — steht in kit/paletten.json"
 }
