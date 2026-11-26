@@ -39,6 +39,13 @@ import {
 } from "./src/lib/server/users.ts";
 import { pushoverRouter } from "./server/pushover-route";
 import { pushRouter, sendePushAnNutzer } from "./server/push-route";
+import { benachrichtigungsRouter, benachrichtige } from "./server/benachrichtigungen";
+
+/** Versand an einen Nutzer in der Form, die `benachrichtige` erwartet. */
+const sendeAn =
+  (nutzerId: number | string) =>
+  (n: { titel: string; text: string; url?: string; tag?: string; dringend?: boolean }) =>
+    sendePushAnNutzer(pool, nutzerId, n);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3000);
@@ -291,6 +298,16 @@ async function startServer() {
     pushRouter(pool as never, (req) => (req as { user?: { person_id?: number } }).user?.person_id ?? null, "MitFahr.io"),
   );
 
+  /* Kategorien, Ruhezeit und Verlauf der Benachrichtigungen. */
+  app.use(
+    "/api/benachrichtigungen",
+    requireAuth,
+    benachrichtigungsRouter(
+      pool as never,
+      (req) => (req as { user?: { person_id?: number } }).user?.person_id ?? null,
+    ),
+  );
+
   app.use("/api", requireAuth);
 
   // ── Eigenes Konto ─────────────────────────────────────────────────────────
@@ -398,6 +415,8 @@ async function startServer() {
       }
 
       const client = await pool.connect();
+      const gespeicherteTrips: number[] = [];
+      let kmSumme = 0;
       try {
         await client.query("BEGIN");
         for (const leg of legs) {
@@ -417,6 +436,8 @@ async function startServer() {
             ]
           );
           const tripId = rows[0].id;
+          gespeicherteTrips.push(tripId);
+          kmSumme += leg.km;
           for (const personId of passengerIds) {
             await client.query(`INSERT INTO trip_passengers (trip_id, person_id) VALUES ($1, $2)`, [
               tripId,
@@ -436,22 +457,36 @@ async function startServer() {
        * Mitfahrer benachrichtigen. Die Fahrt ist gespeichert, die Nachricht darf
        * sie nicht mehr blockieren — deshalb ohne await.
        */
+      /*
+       * Mitfahrer benachrichtigen.
+       *
+       * **Der Fehler vorher:** Die Abfrage las `persons.user_id` — diese Spalte
+       * gibt es nicht. Die Meldung scheiterte still in einem leeren `catch` und
+       * kam nie an. Verknüpft sind Person und Konto über `users.person_id`.
+       *
+       * **Achtung:** Die Push-Abos hängen in dieser App an der `person_id`
+       * (so mountet der Router oben `pushRouter`), nicht an `users.id`.
+       */
       for (const personId of passengerIds) {
         try {
-          const nutzer = await pool.query<{ user_id: number | null }>(
-            "SELECT user_id FROM persons WHERE id = $1 LIMIT 1",
+          const nutzer = await pool.query<{ person_id: number }>(
+            "SELECT person_id FROM users WHERE person_id = $1 LIMIT 1",
             [personId],
           );
-          const ziel = nutzer.rows[0]?.user_id;
+          const ziel = nutzer.rows[0]?.person_id;
           if (!ziel) continue;
-          void sendePushAnNutzer(pool, ziel, {
+          await benachrichtige(pool, sendeAn(ziel), ziel, {
+            kategorie: "erinnerung",
+            ereignis: "neue-fahrt",
+            schluessel: String(gespeicherteTrips[0] ?? tripDate),
             titel: "Neue Fahrt eingetragen",
-            text: "Du bist als Mitfahrer eingetragen — schau in die Abrechnung.",
+            text: `${kmSumme.toLocaleString("de-DE", { maximumFractionDigits: 1 })} km am ${new Date(`${tripDate}T12:00:00Z`).toLocaleDateString("de-DE", { day: "numeric", month: "long", timeZone: "UTC" })} — schau in die Abrechnung.`,
             url: "https://tankpreis-rechner.nas-timgreen.com/",
             tag: "neue-fahrt",
           }).catch(() => undefined);
-        } catch {
-          /* einzelne Person darf das Speichern nicht blockieren */
+        } catch (e) {
+          // Nicht stumm scheitern — sonst ist wieder nicht zu sehen, warum nichts ankommt.
+          console.error("[push] Mitfahrer-Meldung:", (e as Error).message);
         }
       }
 
