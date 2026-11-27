@@ -316,7 +316,7 @@ export default function PushKarte({
               textTransform: 'none',
               letterSpacing: 0,
               background: 'var(--accent-soft, #e6f1eb)',
-              color: 'var(--accent-ink, #123a28)',
+              color: 'var(--accent-ink, #d3dee2)',
             }}
           >
             <Check size={9} /> aktiv
@@ -384,7 +384,7 @@ export default function PushKarte({
             fontSize: 11,
             background:
               meldung.art === 'ok' ? 'var(--accent-soft, #e6f1eb)' : 'var(--danger-soft, #fbecea)',
-            color: meldung.art === 'ok' ? 'var(--accent-ink, #123a28)' : 'var(--danger, #b4453a)',
+            color: meldung.art === 'ok' ? 'var(--accent-ink, #d3dee2)' : 'var(--danger, #b4453a)',
           }}
         >
           {meldung.text}
